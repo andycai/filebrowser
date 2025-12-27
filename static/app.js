@@ -564,4 +564,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 // 初始化
-loadDirectory('/');
+window.onload = function() {
+    // 检查 URL 参数，如果有 file 参数则直接打开该文件
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+
+    if (fileParam) {
+        // 直接打开文件
+        viewFile(decodeURIComponent(fileParam), 1);
+    } else {
+        // 加载根目录
+        loadDirectory('/');
+    }
+};

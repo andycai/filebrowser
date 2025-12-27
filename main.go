@@ -85,6 +85,8 @@ func (s *Server) Start() error {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// API 路由（按特定顺序注册，避免路由冲突）
+	// 更具体的路由必须先注册
+	http.HandleFunc("/view/", s.handleViewRedirect)
 	http.HandleFunc("/api/search", s.handleSearch)
 	http.HandleFunc("/api/list", s.handleList)
 	http.HandleFunc("/api/view", s.handleView)
@@ -105,6 +107,62 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, filepath.Join(s.config.StaticDir, "index.html"))
+}
+
+// handleViewRedirect 处理 /view/ 路径的重定向
+func (s *Server) handleViewRedirect(w http.ResponseWriter, r *http.Request) {
+	// 从 URL 中提取文件路径，去掉 /view/ 前缀
+	filePath := r.URL.Path[len("/view/"):]
+
+	if filePath == "" {
+		s.handleError(w, fmt.Errorf("file path is required"), http.StatusBadRequest)
+		return
+	}
+
+	// 检查路径是否安全
+	fullPath := s.getFullPath("/" + filePath)
+	if !s.isPathSafe(fullPath) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查文件是否存在
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.handleError(w, fmt.Errorf("file not found"), http.StatusNotFound)
+		} else {
+			s.handleError(w, err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if info.IsDir() {
+		s.handleError(w, fmt.Errorf("path is a directory, not a file"), http.StatusBadRequest)
+		return
+	}
+
+	// 直接返回 HTML 页面，其中包含 JavaScript 自动加载文件
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查看文件 - 文件浏览器</title>
+</head>
+<body>
+    <script>
+        // 自动跳转到主页并加载文件
+        window.location.href = '/?file=%s';
+    </script>
+    <div style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+        <h2>正在加载文件...</h2>
+        <p>请稍候，页面将自动跳转</p>
+        <p>如果没有自动跳转，请<a href="/?file=%s">点击这里</a></p>
+    </div>
+</body>
+</html>`, "/"+filePath, "/"+filePath)
 }
 
 // handleList 处理文件列表请求
