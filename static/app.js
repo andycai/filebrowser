@@ -214,6 +214,9 @@ async function viewFile(path, page = 1) {
         pathParts.pop(); // 移除文件名
         currentPath = pathParts.join('/') || '/';
 
+        // 更新面包屑导航
+        updateBreadcrumb(currentPath);
+
         const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
         const response = await fetch(url);
 
@@ -244,6 +247,9 @@ async function viewFileAndScroll(path, page, lineNumber) {
         const pathParts = path.split('/');
         pathParts.pop(); // 移除文件名
         currentPath = pathParts.join('/') || '/';
+
+        // 更新面包屑导航
+        updateBreadcrumb(currentPath);
 
         const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
         const response = await fetch(url);
