@@ -111,6 +111,12 @@ h1 {
     border-color: #3498db;
 }
 
+.search-result-active {
+    background: #e3f2fd !important;
+    border-color: #3498db !important;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
 .search-result-line-number {
     color: #3498db;
     font-weight: bold;
@@ -140,6 +146,21 @@ h1 {
     text-align: center;
     color: #95a5a6;
     padding: 20px;
+}
+
+.search-nav {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.search-nav-info {
+    color: #3498db;
+    font-size: 14px;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
 }
 
 .btn {

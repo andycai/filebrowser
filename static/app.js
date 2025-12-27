@@ -8,6 +8,10 @@ let totalPages = 1;
 let currentFilePath = '';
 // 每页显示的行数（需要与后端保持一致）
 const LinesPerPage = 1000;
+// 当前搜索结果
+let currentSearchResults = [];
+// 当前搜索结果索引
+let currentSearchIndex = -1;
 
 // DOM 元素
 const listView = document.getElementById('listView');
@@ -23,6 +27,10 @@ const paginationBottom = document.getElementById('paginationBottom');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const searchResults = document.getElementById('searchResults');
+const searchNav = document.getElementById('searchNav');
+const prevResultBtn = document.getElementById('prevResultBtn');
+const nextResultBtn = document.getElementById('nextResultBtn');
+const searchNavInfo = document.getElementById('searchNavInfo');
 
 // 工具函数：格式化文件大小
 function formatSize(bytes) {
@@ -260,9 +268,8 @@ function scrollToLine(lineNumber) {
     // 添加高亮
     lineElement.classList.add('line-highlight');
 
-    // 计算滚动位置：目标行前面显示5行，即目标行在第6行位置
+    // 计算滚动位置：目标行前面显示5行，即从顶部开始第6行位置
     const container = fileContent;
-    const containerHeight = container.clientHeight;
     const lineTop = lineElement.offsetTop;
     const lineHeight = lineElement.clientHeight;
 
@@ -273,9 +280,9 @@ function scrollToLine(lineNumber) {
     // 计算目标行相对于第一行的距离
     const relativeTop = lineTop - firstLineTop;
 
-    // 设置滚动位置，使目标行前面显示5行（即目标行在第6行位置）
-    // 5行的高度 + 一半的视口高度 - 目标行的一半高度（居中效果）
-    const scrollTop = relativeTop - (5 * lineHeight) - (containerHeight / 2) + (lineHeight / 2);
+    // 设置滚动位置，使目标行前面正好显示5行
+    // 即：目标行位置 - 5行的高度
+    const scrollTop = relativeTop - (5 * lineHeight);
 
     // 确保不会滚动到负数
     container.scrollTop = Math.max(0, scrollTop);
@@ -360,7 +367,10 @@ function showListView() {
     listView.style.display = 'block';
     contentView.style.display = 'none';
     searchResults.style.display = 'none';
+    searchNav.style.display = 'none';
     searchInput.value = ''; // 清空搜索框
+    currentSearchResults = []; // 清空搜索结果
+    currentSearchIndex = -1;
 }
 
 // 显示内容视图
@@ -401,6 +411,10 @@ searchInput.addEventListener('keypress', (e) => {
     }
 });
 
+// 搜索导航按钮
+prevResultBtn.addEventListener('click', prevSearchResult);
+nextResultBtn.addEventListener('click', nextSearchResult);
+
 // 搜索文件内容
 async function searchFile(path, query) {
     try {
@@ -413,7 +427,14 @@ async function searchFile(path, query) {
         }
 
         const results = await response.json();
+        currentSearchResults = results;
+        currentSearchIndex = -1;
         renderSearchResults(results, query);
+
+        // 自动跳转到第一个结果
+        if (results && results.length > 0) {
+            goToSearchResult(0);
+        }
     } catch (error) {
         showError(error.message);
     } finally {
@@ -426,12 +447,13 @@ function renderSearchResults(results, query) {
     if (!results || results.length === 0) {
         searchResults.innerHTML = '<div class="no-results">未找到匹配的结果</div>';
         searchResults.style.display = 'block';
+        searchNav.style.display = 'none';
         return;
     }
 
     let html = `<div class="search-results-header">找到 ${results.length} 个结果</div>`;
 
-    results.forEach(result => {
+    results.forEach((result, index) => {
         // 高亮匹配的文本
         const highlightedLine = highlightText(result.line, query);
 
@@ -439,7 +461,10 @@ function renderSearchResults(results, query) {
         const pageInfo = totalPages > 1 ? `<span class="search-result-page">第 ${result.page} 页</span>` : '';
 
         html += `
-            <div class="search-result-item" data-page="${result.page}" data-line="${result.lineNumber}">
+            <div class="search-result-item ${index === currentSearchIndex ? 'search-result-active' : ''}"
+                 data-page="${result.page}"
+                 data-line="${result.lineNumber}"
+                 data-index="${index}">
                 <div>
                     <span class="search-result-line-number">行 ${result.lineNumber}</span>
                     ${pageInfo}
@@ -452,14 +477,68 @@ function renderSearchResults(results, query) {
     searchResults.innerHTML = html;
     searchResults.style.display = 'block';
 
+    // 显示导航按钮
+    searchNav.style.display = 'flex';
+    updateSearchNavInfo();
+
     // 添加点击事件
     document.querySelectorAll('.search-result-item').forEach(item => {
         item.addEventListener('click', () => {
-            const page = parseInt(item.getAttribute('data-page'));
-            const lineNumber = parseInt(item.getAttribute('data-line'));
-            viewFileAndScroll(currentFilePath, page, lineNumber);
+            const index = parseInt(item.getAttribute('data-index'));
+            goToSearchResult(index);
         });
     });
+}
+
+// 跳转到指定的搜索结果
+function goToSearchResult(index) {
+    if (index < 0 || index >= currentSearchResults.length) return;
+
+    currentSearchIndex = index;
+    const result = currentSearchResults[index];
+
+    // 更新高亮状态
+    document.querySelectorAll('.search-result-item').forEach((item, i) => {
+        if (i === index) {
+            item.classList.add('search-result-active');
+        } else {
+            item.classList.remove('search-result-active');
+        }
+    });
+
+    // 更新导航信息
+    updateSearchNavInfo();
+
+    // 跳转到对应位置
+    viewFileAndScroll(currentFilePath, result.page, result.lineNumber);
+}
+
+// 更新搜索导航信息
+function updateSearchNavInfo() {
+    if (currentSearchResults.length === 0) {
+        searchNavInfo.textContent = '0/0';
+        prevResultBtn.disabled = true;
+        nextResultBtn.disabled = true;
+        return;
+    }
+
+    searchNavInfo.textContent = `${currentSearchIndex + 1}/${currentSearchResults.length}`;
+    prevResultBtn.disabled = currentSearchIndex <= 0;
+    nextResultBtn.disabled = currentSearchIndex >= currentSearchResults.length - 1;
+}
+
+// 上一个搜索结果
+function prevSearchResult() {
+    if (currentSearchIndex > 0) {
+        goToSearchResult(currentSearchIndex - 1);
+    }
+}
+
+// 下一个搜索结果
+function nextSearchResult() {
+    if (currentSearchIndex < currentSearchResults.length - 1) {
+        goToSearchResult(currentSearchIndex + 1);
+    }
 }
 
 // 高亮搜索文本
