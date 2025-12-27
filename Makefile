@@ -41,7 +41,7 @@ stop:
 	./service.sh stop
 
 # 重启服务
-restart:
+restart: build
 	@echo "重启服务..."
 	./service.sh restart
 

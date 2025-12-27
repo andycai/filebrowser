@@ -61,6 +61,87 @@ h1 {
     flex-wrap: wrap;
 }
 
+.search-box {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-left: auto;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 200px;
+    outline: none;
+}
+
+.search-input:focus {
+    border-color: #3498db;
+}
+
+.search-results {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.search-results-header {
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.search-result-item {
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid #ecf0f1;
+}
+
+.search-result-item:hover {
+    background: #f8f9fa;
+    border-color: #3498db;
+}
+
+.search-result-line-number {
+    color: #3498db;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.search-result-page {
+    color: #7f8c8d;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.search-result-content {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    margin-top: 5px;
+    word-break: break-all;
+}
+
+.search-highlight {
+    background: #fff3cd;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.no-results {
+    text-align: center;
+    color: #95a5a6;
+    padding: 20px;
+}
+
 .btn {
     padding: 8px 16px;
     border: none;
@@ -171,6 +252,31 @@ h1 {
     line-height: 1.5;
     white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+.file-line {
+    padding: 2px 5px;
+    transition: background-color 0.3s;
+}
+
+.file-line:hover {
+    background-color: #f8f9fa;
+}
+
+.file-line.line-highlight {
+    background-color: #fff3cd;
+    border-left: 3px solid #ffc107;
+    padding-left: 8px;
+    animation: pulse 1s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
 }
 
 .pagination {

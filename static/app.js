@@ -6,6 +6,8 @@ let currentPage = 1;
 let totalPages = 1;
 // 当前查看的文件路径
 let currentFilePath = '';
+// 每页显示的行数（需要与后端保持一致）
+const LinesPerPage = 1000;
 
 // DOM 元素
 const listView = document.getElementById('listView');
@@ -18,6 +20,9 @@ const fileInfo = document.getElementById('fileInfo');
 const loading = document.getElementById('loading');
 const pagination = document.getElementById('pagination');
 const paginationBottom = document.getElementById('paginationBottom');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const searchResults = document.getElementById('searchResults');
 
 // 工具函数：格式化文件大小
 function formatSize(bytes) {
@@ -212,6 +217,75 @@ async function viewFile(path, page = 1) {
     }
 }
 
+// 查看文件并滚动到指定行
+async function viewFileAndScroll(path, page, lineNumber) {
+    try {
+        showLoading();
+        currentFilePath = path;
+        const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to load file');
+        }
+
+        const data = await response.json();
+        currentPage = data.page;
+        totalPages = data.totalPages;
+
+        renderFileContent(data);
+        showContentView();
+
+        // 等待 DOM 更新后滚动到指定行
+        setTimeout(() => {
+            scrollToLine(lineNumber);
+        }, 100);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 滚动到指定行并高亮显示
+function scrollToLine(lineNumber) {
+    const lineElement = fileContent.querySelector(`[data-line-number="${lineNumber}"]`);
+    if (!lineElement) return;
+
+    // 移除之前的高亮
+    fileContent.querySelectorAll('.line-highlight').forEach(el => {
+        el.classList.remove('line-highlight');
+    });
+
+    // 添加高亮
+    lineElement.classList.add('line-highlight');
+
+    // 计算滚动位置：目标行前面显示5行，即目标行在第6行位置
+    const container = fileContent;
+    const containerHeight = container.clientHeight;
+    const lineTop = lineElement.offsetTop;
+    const lineHeight = lineElement.clientHeight;
+
+    // 获取第一行的位置作为基准
+    const firstLine = fileContent.querySelector('.file-line');
+    const firstLineTop = firstLine ? firstLine.offsetTop : 0;
+
+    // 计算目标行相对于第一行的距离
+    const relativeTop = lineTop - firstLineTop;
+
+    // 设置滚动位置，使目标行前面显示5行（即目标行在第6行位置）
+    // 5行的高度 + 一半的视口高度 - 目标行的一半高度（居中效果）
+    const scrollTop = relativeTop - (5 * lineHeight) - (containerHeight / 2) + (lineHeight / 2);
+
+    // 确保不会滚动到负数
+    container.scrollTop = Math.max(0, scrollTop);
+
+    // 3秒后移除高亮
+    setTimeout(() => {
+        lineElement.classList.remove('line-highlight');
+    }, 3000);
+}
+
 // 渲染文件内容
 function renderFileContent(data) {
     fileName.textContent = data.name;
@@ -221,9 +295,13 @@ function renderFileContent(data) {
         fileInfo.textContent += ` • 第 ${data.page}/${data.totalPages} 页`;
     }
 
-    // 转义 HTML 并显示内容
-    const escapedContent = data.lines.map(line => escapeHtml(line)).join('\n');
-    fileContent.textContent = data.lines.join('\n');
+    // 显示内容并标记行号
+    const linesHtml = data.lines.map((line, index) => {
+        const lineNum = (data.page - 1) * LinesPerPage + index + 1;
+        return `<div class="file-line" data-line-number="${lineNum}">${escapeHtml(line)}</div>`;
+    }).join('');
+
+    fileContent.innerHTML = linesHtml;
 
     // 如果是分页内容，显示分页控件
     if (data.isPartial) {
@@ -281,6 +359,8 @@ function escapeJsString(str) {
 function showListView() {
     listView.style.display = 'block';
     contentView.style.display = 'none';
+    searchResults.style.display = 'none';
+    searchInput.value = ''; // 清空搜索框
 }
 
 // 显示内容视图
@@ -302,6 +382,93 @@ document.getElementById('upBtn').addEventListener('click', () => {
 document.getElementById('backBtn').addEventListener('click', () => {
     showListView();
 });
+
+// 搜索功能
+searchBtn.addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    if (query && currentFilePath) {
+        searchFile(currentFilePath, query);
+    }
+});
+
+// 支持回车键搜索
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const query = searchInput.value.trim();
+        if (query && currentFilePath) {
+            searchFile(currentFilePath, query);
+        }
+    }
+});
+
+// 搜索文件内容
+async function searchFile(path, query) {
+    try {
+        showLoading();
+        const url = `/api/search?path=${encodeURIComponent(path)}&q=${encodeURIComponent(query)}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('搜索失败');
+        }
+
+        const results = await response.json();
+        renderSearchResults(results, query);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 渲染搜索结果
+function renderSearchResults(results, query) {
+    if (!results || results.length === 0) {
+        searchResults.innerHTML = '<div class="no-results">未找到匹配的结果</div>';
+        searchResults.style.display = 'block';
+        return;
+    }
+
+    let html = `<div class="search-results-header">找到 ${results.length} 个结果</div>`;
+
+    results.forEach(result => {
+        // 高亮匹配的文本
+        const highlightedLine = highlightText(result.line, query);
+
+        // 只有多页文件才显示页码
+        const pageInfo = totalPages > 1 ? `<span class="search-result-page">第 ${result.page} 页</span>` : '';
+
+        html += `
+            <div class="search-result-item" data-page="${result.page}" data-line="${result.lineNumber}">
+                <div>
+                    <span class="search-result-line-number">行 ${result.lineNumber}</span>
+                    ${pageInfo}
+                </div>
+                <div class="search-result-content">${highlightedLine}</div>
+            </div>
+        `;
+    });
+
+    searchResults.innerHTML = html;
+    searchResults.style.display = 'block';
+
+    // 添加点击事件
+    document.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const page = parseInt(item.getAttribute('data-page'));
+            const lineNumber = parseInt(item.getAttribute('data-line'));
+            viewFileAndScroll(currentFilePath, page, lineNumber);
+        });
+    });
+}
+
+// 高亮搜索文本
+function highlightText(text, query) {
+    const escapedText = escapeHtml(text);
+    const escapedQuery = escapeHtml(query);
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return escapedText.replace(regex, '<span class="search-highlight">$1</span>');
+}
 
 // 键盘快捷键
 document.addEventListener('keydown', (e) => {

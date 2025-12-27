@@ -49,6 +49,13 @@ type FileContent struct {
 	TotalPages int      `json:"totalPages"` // 总页数
 }
 
+// SearchResult 搜索结果
+type SearchResult struct {
+	LineNumber int    `json:"lineNumber"` // 行号（从1开始）
+	Page       int    `json:"page"`       // 所在页码
+	Line       string `json:"line"`       // 行内容
+}
+
 // Server 文件浏览服务器
 type Server struct {
 	config *Config
@@ -77,7 +84,8 @@ func (s *Server) Start() error {
 	fs := http.FileServer(http.Dir(s.config.StaticDir))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// API 路由
+	// API 路由（按特定顺序注册，避免路由冲突）
+	http.HandleFunc("/api/search", s.handleSearch)
 	http.HandleFunc("/api/list", s.handleList)
 	http.HandleFunc("/api/view", s.handleView)
 	http.HandleFunc("/", s.handleIndex)
@@ -340,6 +348,99 @@ func (s *Server) handleError(w http.ResponseWriter, err error, status int) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": err.Error(),
 	})
+}
+
+// handleSearch 处理文件搜索请求
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	query := r.URL.Query().Get("q")
+
+	if path == "" {
+		s.handleError(w, fmt.Errorf("path parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	if query == "" {
+		s.handleError(w, fmt.Errorf("query parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	// 构建完整路径
+	fullPath := s.getFullPath(path)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(fullPath) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查是否为文件
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusNotFound)
+		return
+	}
+
+	if info.IsDir() {
+		s.handleError(w, fmt.Errorf("path is a directory"), http.StatusBadRequest)
+		return
+	}
+
+	// 搜索文件
+	results, err := s.searchFile(fullPath, query)
+	if err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	s.writeJSON(w, results)
+}
+
+// searchFile 在文件中搜索文本
+func (s *Server) searchFile(filePath, query string) ([]SearchResult, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var results []SearchResult
+	lineNumber := 0
+	scanner := NewLineScanner(file)
+
+	// 限制最多返回 100 个结果
+	const maxResults = 100
+
+	for scanner.Scan() && len(results) < maxResults {
+		lineNumber++
+		line := scanner.Text()
+
+		// 简单的字符串包含搜索（不区分大小写）
+		if containsIgnoreCase(line, query) {
+			// 计算所在页码
+			page := (lineNumber + LinesPerPage - 1) / LinesPerPage
+			if page < 1 {
+				page = 1
+			}
+
+			results = append(results, SearchResult{
+				LineNumber: lineNumber,
+				Page:       page,
+				Line:       strings.TrimSpace(line),
+			})
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// containsIgnoreCase 不区分大小写的字符串包含检查
+func containsIgnoreCase(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
 
 func main() {
