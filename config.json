@@ -1,0 +1,5 @@
+{
+  "rootDir": ".",
+  "port": 8080,
+  "staticDir": "./static"
+}

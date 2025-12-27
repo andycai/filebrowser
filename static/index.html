@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件浏览器</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📁 文件浏览器</h1>
+            <div class="breadcrumb" id="breadcrumb"></div>
+        </header>
+
+        <main>
+            <!-- 文件列表视图 -->
+            <div id="listView" class="view">
+                <div class="toolbar">
+                    <button id="refreshBtn" class="btn btn-secondary">刷新</button>
+                    <button id="upBtn" class="btn btn-secondary">返回上级</button>
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <!-- 文件内容视图 -->
+            <div id="contentView" class="view" style="display: none;">
+                <div class="toolbar">
+                    <button id="backBtn" class="btn btn-secondary">返回</button>
+                    <span id="fileName" class="file-name"></span>
+                    <span id="fileInfo" class="file-info"></span>
+                </div>
+                <div class="pagination" id="pagination"></div>
+                <pre id="fileContent" class="file-content"></pre>
+                <div class="pagination" id="paginationBottom"></div>
+            </div>
+        </main>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
