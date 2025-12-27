@@ -533,8 +533,14 @@ function goToSearchResult(index) {
     // 更新导航信息
     updateSearchNavInfo();
 
-    // 跳转到对应位置
-    viewFileAndScroll(currentFilePath, result.page, result.lineNumber);
+    // 判断搜索结果是否在当前页面
+    if (result.page === currentPage) {
+        // 在当前页面，直接滚动到目标行，无需重新加载
+        scrollToLine(result.lineNumber);
+    } else {
+        // 不在当前页面，需要加载新页面
+        viewFileAndScroll(currentFilePath, result.page, result.lineNumber);
+    }
 }
 
 // 更新搜索导航信息
