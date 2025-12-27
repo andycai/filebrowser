@@ -136,7 +136,10 @@ async function loadDirectory(path) {
         currentPath = path;
         renderFileList(files);
         updateBreadcrumb(path);
-        showListView();
+
+        // 只切换视图，不重新加载
+        listView.style.display = 'block';
+        contentView.style.display = 'none';
     } catch (error) {
         showError(error.message);
     } finally {
@@ -205,6 +208,12 @@ async function viewFile(path, page = 1) {
     try {
         showLoading();
         currentFilePath = path; // 保存当前文件路径
+
+        // 从文件路径中提取目录路径，保存到 currentPath
+        const pathParts = path.split('/');
+        pathParts.pop(); // 移除文件名
+        currentPath = pathParts.join('/') || '/';
+
         const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
         const response = await fetch(url);
 
@@ -230,6 +239,12 @@ async function viewFileAndScroll(path, page, lineNumber) {
     try {
         showLoading();
         currentFilePath = path;
+
+        // 从文件路径中提取目录路径，保存到 currentPath
+        const pathParts = path.split('/');
+        pathParts.pop(); // 移除文件名
+        currentPath = pathParts.join('/') || '/';
+
         const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
         const response = await fetch(url);
 
@@ -371,6 +386,9 @@ function showListView() {
     searchInput.value = ''; // 清空搜索框
     currentSearchResults = []; // 清空搜索结果
     currentSearchIndex = -1;
+
+    // 加载目录内容
+    loadDirectory(currentPath);
 }
 
 // 显示内容视图
