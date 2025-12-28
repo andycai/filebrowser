@@ -12,6 +12,10 @@ const LinesPerPage = 1000;
 let currentSearchResults = [];
 // 当前搜索结果索引
 let currentSearchIndex = -1;
+// 当前根目录索引
+let currentRootIndex = 0;
+// 所有根目录配置
+let rootDirs = [];
 
 // DOM 元素
 const listView = document.getElementById('listView');
@@ -31,6 +35,7 @@ const searchNav = document.getElementById('searchNav');
 const prevResultBtn = document.getElementById('prevResultBtn');
 const nextResultBtn = document.getElementById('nextResultBtn');
 const searchNavInfo = document.getElementById('searchNavInfo');
+const rootSelect = document.getElementById('rootSelect');
 
 // 工具函数：格式化文件大小
 function formatSize(bytes) {
@@ -99,6 +104,47 @@ function showError(message) {
     alert('错误: ' + message);
 }
 
+// 加载根目录列表
+async function loadRoots() {
+    try {
+        const response = await fetch('/api/roots');
+        if (!response.ok) {
+            throw new Error('Failed to load roots');
+        }
+        rootDirs = await response.json();
+        updateRootSelect();
+    } catch (error) {
+        console.error('加载根目录失败:', error);
+    }
+}
+
+// 更新根目录选择器
+function updateRootSelect() {
+    if (!rootSelect) return;
+
+    rootSelect.innerHTML = '';
+    rootDirs.forEach((root, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = root.name;
+        rootSelect.appendChild(option);
+    });
+
+    // 设置当前选中的根目录
+    rootSelect.value = currentRootIndex;
+
+    // 添加切换事件
+    rootSelect.addEventListener('change', (e) => {
+        const newIndex = parseInt(e.target.value);
+        if (newIndex !== currentRootIndex) {
+            currentRootIndex = newIndex;
+            // 重置路径并重新加载
+            currentPath = '/';
+            loadDirectory('/', currentRootIndex);
+        }
+    });
+}
+
 // 更新面包屑导航
 function updateBreadcrumb(path) {
     const parts = path.split('/').filter(p => p);
@@ -123,10 +169,10 @@ function updateBreadcrumb(path) {
 }
 
 // 加载目录内容
-async function loadDirectory(path) {
+async function loadDirectory(path, rootIndex = currentRootIndex) {
     try {
         showLoading();
-        const response = await fetch(`/api/list?path=${encodeURIComponent(path)}`);
+        const response = await fetch(`/api/list?path=${encodeURIComponent(path)}&root=${rootIndex}`);
 
         if (!response.ok) {
             throw new Error('Failed to load directory');
@@ -134,8 +180,12 @@ async function loadDirectory(path) {
 
         const files = await response.json();
         currentPath = path;
+        currentRootIndex = rootIndex;
         renderFileList(files);
         updateBreadcrumb(path);
+
+        // 更新根目录选择器
+        rootSelect.value = currentRootIndex;
 
         // 只切换视图，不重新加载
         listView.style.display = 'block';
@@ -217,7 +267,7 @@ async function viewFile(path, page = 1) {
         // 更新面包屑导航
         updateBreadcrumb(currentPath);
 
-        const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
+        const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}&root=${currentRootIndex}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -251,7 +301,7 @@ async function viewFileAndScroll(path, page, lineNumber) {
         // 更新面包屑导航
         updateBreadcrumb(currentPath);
 
-        const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}`;
+        const url = `/api/view?path=${encodeURIComponent(path)}&page=${page}&root=${currentRootIndex}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -348,8 +398,8 @@ function renderPagination(path, page, totalPages) {
         if (disabled) {
             return `<button class="btn btn-secondary" disabled>${text}</button>`;
         }
-        // 使用 data 属性存储路径和页码，避免特殊字符问题
-        return `<button class="btn btn-secondary pagination-btn" data-path="${escapeHtml(path)}" data-page="${newPage}">${text}</button>`;
+        // 使用 data 属性存储路径、页码和根目录索引，避免特殊字符问题
+        return `<button class="btn btn-secondary pagination-btn" data-path="${escapeHtml(path)}" data-page="${newPage}" data-root="${currentRootIndex}">${text}</button>`;
     };
 
     let html = createButton('« 首页', 1, page === 1);
@@ -366,6 +416,8 @@ function renderPagination(path, page, totalPages) {
         btn.addEventListener('click', () => {
             const filePath = btn.getAttribute('data-path');
             const newPage = parseInt(btn.getAttribute('data-page'));
+            const rootIndex = parseInt(btn.getAttribute('data-root'));
+            currentRootIndex = rootIndex;
             viewFile(filePath, newPage);
         });
     });
@@ -443,7 +495,7 @@ nextResultBtn.addEventListener('click', nextSearchResult);
 async function searchFile(path, query) {
     try {
         showLoading();
-        const url = `/api/search?path=${encodeURIComponent(path)}&q=${encodeURIComponent(query)}`;
+        const url = `/api/search?path=${encodeURIComponent(path)}&q=${encodeURIComponent(query)}&root=${currentRootIndex}`;
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -595,15 +647,18 @@ document.addEventListener('keydown', (e) => {
 
 // 初始化
 window.onload = function() {
-    // 检查 URL 参数，如果有 file 参数则直接打开该文件
-    const urlParams = new URLSearchParams(window.location.search);
-    const fileParam = urlParams.get('file');
+    // 先加载根目录列表
+    loadRoots().then(() => {
+        // 检查 URL 参数，如果有 file 参数则直接打开该文件
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileParam = urlParams.get('file');
 
-    if (fileParam) {
-        // 直接打开文件
-        viewFile(decodeURIComponent(fileParam), 1);
-    } else {
-        // 加载根目录
-        loadDirectory('/');
-    }
+        if (fileParam) {
+            // 直接打开文件
+            viewFile(decodeURIComponent(fileParam), 1);
+        } else {
+            // 加载根目录
+            loadDirectory('/');
+        }
+    });
 };

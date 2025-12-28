@@ -31,6 +31,43 @@ h1 {
     color: #2c3e50;
 }
 
+.root-switcher {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.root-switcher label {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+.root-select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.root-select:hover {
+    border-color: #3498db;
+}
+
+.root-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
 .breadcrumb {
     display: flex;
     flex-wrap: wrap;

@@ -22,9 +22,15 @@ const (
 
 // Config 配置结构
 type Config struct {
-	RootDir   string `json:"rootDir"`
-	Port      int    `json:"port"`
-	StaticDir string `json:"staticDir"`
+	RootDirs  []RootDirConfig `json:"rootDirs"`
+	Port      int             `json:"port"`
+	StaticDir string          `json:"staticDir"`
+}
+
+// RootDirConfig 根目录配置
+type RootDirConfig struct {
+	Name string `json:"name"` // 显示名称
+	Path string `json:"path"` // 实际路径
 }
 
 // FileItem 文件项信息
@@ -63,16 +69,19 @@ type Server struct {
 
 // NewServer 创建新的服务器实例
 func NewServer(config *Config) *Server {
-	// 确保根目录是绝对路径
-	absPath, err := filepath.Abs(config.RootDir)
-	if err != nil {
-		log.Fatalf("Failed to get absolute path: %v", err)
-	}
-	config.RootDir = absPath
+	// 验证所有根目录
+	for i, rootDir := range config.RootDirs {
+		// 确保根目录是绝对路径
+		absPath, err := filepath.Abs(rootDir.Path)
+		if err != nil {
+			log.Fatalf("Failed to get absolute path for %s: %v", rootDir.Name, err)
+		}
+		config.RootDirs[i].Path = absPath
 
-	// 检查根目录是否存在
-	if _, err := os.Stat(config.RootDir); os.IsNotExist(err) {
-		log.Fatalf("Root directory does not exist: %s", config.RootDir)
+		// 检查根目录是否存在
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			log.Fatalf("Root directory does not exist: %s (%s)", rootDir.Name, absPath)
+		}
 	}
 
 	return &Server{config: config}
@@ -87,6 +96,7 @@ func (s *Server) Start() error {
 	// API 路由（按特定顺序注册，避免路由冲突）
 	// 更具体的路由必须先注册
 	http.HandleFunc("/view/", s.handleViewRedirect)
+	http.HandleFunc("/api/roots", s.handleRoots)
 	http.HandleFunc("/api/search", s.handleSearch)
 	http.HandleFunc("/api/list", s.handleList)
 	http.HandleFunc("/api/view", s.handleView)
@@ -94,7 +104,10 @@ func (s *Server) Start() error {
 
 	addr := fmt.Sprintf(":%d", s.config.Port)
 	log.Printf("Starting file browser on http://localhost%s", addr)
-	log.Printf("Root directory: %s", s.config.RootDir)
+	log.Printf("Root directories: %d", len(s.config.RootDirs))
+	for _, root := range s.config.RootDirs {
+		log.Printf("  - %s: %s", root.Name, root.Path)
+	}
 
 	return http.ListenAndServe(addr, nil)
 }
@@ -119,9 +132,11 @@ func (s *Server) handleViewRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rootIndex := getRootIndex(r)
+
 	// 检查路径是否安全
-	fullPath := s.getFullPath("/" + filePath)
-	if !s.isPathSafe(fullPath) {
+	fullPath := s.getFullPath("/"+filePath, rootIndex)
+	if !s.isPathSafe(fullPath, rootIndex) {
 		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
 		return
 	}
@@ -172,11 +187,13 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 		path = "/"
 	}
 
+	rootIndex := getRootIndex(r)
+
 	// 构建完整路径
-	fullPath := s.getFullPath(path)
+	fullPath := s.getFullPath(path, rootIndex)
 
 	// 检查路径是否在根目录内
-	if !s.isPathSafe(fullPath) {
+	if !s.isPathSafe(fullPath, rootIndex) {
 		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
 		return
 	}
@@ -196,7 +213,7 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		relPath, _ := filepath.Rel(s.config.RootDir, filepath.Join(fullPath, entry.Name()))
+		relPath, _ := filepath.Rel(s.config.RootDirs[rootIndex].Path, filepath.Join(fullPath, entry.Name()))
 
 		item := FileItem{
 			Name:    entry.Name(),
@@ -229,11 +246,13 @@ func (s *Server) handleView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rootIndex := getRootIndex(r)
+
 	// 构建完整路径
-	fullPath := s.getFullPath(path)
+	fullPath := s.getFullPath(path, rootIndex)
 
 	// 检查路径是否在根目录内
-	if !s.isPathSafe(fullPath) {
+	if !s.isPathSafe(fullPath, rootIndex) {
 		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
 		return
 	}
@@ -362,20 +381,41 @@ func (s *Server) countLines(file *os.File) int {
 }
 
 // getFullPath 获取完整路径
-func (s *Server) getFullPath(path string) string {
+// rootIndex 是根目录的索引（从 URL 参数获取），如果为空或无效则使用第一个根目录
+func (s *Server) getFullPath(path string, rootIndex int) string {
+	// 确保 rootIndex 在有效范围内
+	if rootIndex < 0 || rootIndex >= len(s.config.RootDirs) {
+		rootIndex = 0
+	}
+
 	// 移除开头的 /
 	path = strings.TrimPrefix(path, "/")
-	return filepath.Join(s.config.RootDir, path)
+	return filepath.Join(s.config.RootDirs[rootIndex].Path, path)
+}
+
+// getRootIndex 从 URL 查询参数获取根目录索引
+func getRootIndex(r *http.Request) int {
+	if idxStr := r.URL.Query().Get("root"); idxStr != "" {
+		if idx, err := strconv.Atoi(idxStr); err == nil {
+			return idx
+		}
+	}
+	return 0 // 默认使用第一个根目录
 }
 
 // isPathSafe 检查路径是否安全（防止目录遍历攻击）
-func (s *Server) isPathSafe(path string) bool {
+func (s *Server) isPathSafe(path string, rootIndex int) bool {
+	// 确保 rootIndex 在有效范围内
+	if rootIndex < 0 || rootIndex >= len(s.config.RootDirs) {
+		return false
+	}
+
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return false
 	}
 
-	absRoot, err := filepath.Abs(s.config.RootDir)
+	absRoot, err := filepath.Abs(s.config.RootDirs[rootIndex].Path)
 	if err != nil {
 		return false
 	}
@@ -423,11 +463,13 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rootIndex := getRootIndex(r)
+
 	// 构建完整路径
-	fullPath := s.getFullPath(path)
+	fullPath := s.getFullPath(path, rootIndex)
 
 	// 检查路径是否在根目录内
-	if !s.isPathSafe(fullPath) {
+	if !s.isPathSafe(fullPath, rootIndex) {
 		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
 		return
 	}
@@ -499,6 +541,16 @@ func (s *Server) searchFile(filePath, query string) ([]SearchResult, error) {
 // containsIgnoreCase 不区分大小写的字符串包含检查
 func containsIgnoreCase(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// handleRoots 处理获取根目录列表的请求
+func (s *Server) handleRoots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// 直接返回配置的根目录列表
+	if err := json.NewEncoder(w).Encode(s.config.RootDirs); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func main() {

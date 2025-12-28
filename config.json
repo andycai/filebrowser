@@ -1,5 +1,18 @@
 {
-  "rootDir": ".",
+  "rootDirs": [
+    {
+      "name": "项目目录",
+      "path": "."
+    },
+    {
+      "name": "用户主目录",
+      "path": "/Users/andy"
+    },
+    {
+      "name": "系统根目录",
+      "path": "/"
+    }
+  ],
   "port": 8080,
   "staticDir": "./static"
 }
