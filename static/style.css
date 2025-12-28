@@ -247,7 +247,7 @@ h1 {
 
 .file-item {
     display: grid;
-    grid-template-columns: 40px 1fr 120px 180px;
+    grid-template-columns: 40px 1fr 120px 180px 150px;
     gap: 10px;
     padding: 12px 15px;
     border-bottom: 1px solid #ecf0f1;
@@ -286,15 +286,70 @@ h1 {
     font-size: 13px;
 }
 
+.file-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-edit-list,
+.btn-advanced-edit-list,
+.btn-delete-list {
+    padding: 4px 8px;
+    font-size: 14px;
+    border-radius: 3px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit-list {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit-list:hover {
+    background: #2980b9;
+    transform: scale(1.1);
+}
+
+.btn-advanced-edit-list {
+    background: #9b59b6;
+    color: white;
+}
+
+.btn-advanced-edit-list:hover {
+    background: #8e44ad;
+    transform: scale(1.1);
+}
+
+.btn-delete-list {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete-list:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
 .file-header {
     display: grid;
-    grid-template-columns: 40px 1fr 120px 180px;
+    grid-template-columns: 40px 1fr 120px 180px 150px;
     gap: 10px;
     padding: 10px 15px;
     background: #ecf0f1;
     font-weight: bold;
     font-size: 13px;
     color: #2c3e50;
+}
+
+.file-actions-header {
+    text-align: center;
 }
 
 .file-content {
@@ -404,7 +459,9 @@ h1 {
     }
 
     .file-size,
-    .file-date {
+    .file-date,
+    .file-actions,
+    .file-actions-header {
         display: none;
     }
 
@@ -417,4 +474,193 @@ h1 {
         margin-left: 0;
         margin-top: 10px;
     }
+}
+
+/* 编辑功能样式 - 移除旧的行操作样式 */
+.file-line {
+    padding: 2px 5px;
+    transition: background-color 0.3s;
+}
+
+.file-line:hover {
+    background-color: #f8f9fa;
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-large .modal-content {
+    max-width: 900px;
+    max-height: 80vh;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ecf0f1;
+    background: #f8f9fa;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #95a5a6;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: #e74c3c;
+    color: white;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: 1px solid #ecf0f1;
+    background: #f8f9fa;
+}
+
+.edit-textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+}
+
+.edit-textarea:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+/* JSON 编辑器样式 */
+#jsonEditor {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 13px;
+}
+
+.json-item {
+    margin: 8px 0;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #3498db;
+}
+
+.json-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.json-item-key {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.json-item-type {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #ecf0f1;
+    color: #7f8c8d;
+}
+
+.json-item-value {
+    margin-top: 5px;
+}
+
+.json-value-input {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.json-value-input:focus {
+    border-color: #3498db;
+}
+
+.json-item-children {
+    margin-left: 20px;
+    margin-top: 8px;
+    padding-left: 10px;
+    border-left: 2px solid #ecf0f1;
+}
+
+.btn-small {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+.btn-delete-field {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete-field:hover {
+    background: #c0392b;
+}
+
+.btn-add-field {
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 6px 12px;
 }

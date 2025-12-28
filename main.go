@@ -62,6 +62,12 @@ type SearchResult struct {
 	Line       string `json:"line"`       // 行内容
 }
 
+// SaveRequest 保存文件请求
+type SaveRequest struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
 // Server 文件浏览服务器
 type Server struct {
 	config *Config
@@ -100,6 +106,8 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/search", s.handleSearch)
 	http.HandleFunc("/api/list", s.handleList)
 	http.HandleFunc("/api/view", s.handleView)
+	http.HandleFunc("/api/save", s.handleSave)
+	http.HandleFunc("/api/delete", s.handleDelete)
 	http.HandleFunc("/", s.handleIndex)
 
 	addr := fmt.Sprintf(":%d", s.config.Port)
@@ -551,6 +559,106 @@ func (s *Server) handleRoots(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(s.config.RootDirs); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// handleSave 处理保存文件请求
+func (s *Server) handleSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.handleError(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req SaveRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.handleError(w, fmt.Errorf("invalid request body"), http.StatusBadRequest)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 构建完整路径
+	fullPath := s.getFullPath(req.Path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查文件是否存在
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusNotFound)
+		return
+	}
+
+	// 确保不是目录
+	if info.IsDir() {
+		s.handleError(w, fmt.Errorf("cannot save directory"), http.StatusBadRequest)
+		return
+	}
+
+	// 写入文件
+	if err := os.WriteFile(fullPath, []byte(req.Content), 0644); err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "文件保存成功",
+	})
+}
+
+// handleDelete 处理删除文件请求
+func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete && r.Method != http.MethodPost {
+		s.handleError(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		s.handleError(w, fmt.Errorf("path parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 构建完整路径
+	fullPath := s.getFullPath(path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查文件是否存在
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusNotFound)
+		return
+	}
+
+	// 确保不是目录
+	if info.IsDir() {
+		s.handleError(w, fmt.Errorf("cannot delete directory"), http.StatusBadRequest)
+		return
+	}
+
+	// 删除文件
+	if err := os.Remove(fullPath); err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "文件删除成功",
+	})
 }
 
 func main() {

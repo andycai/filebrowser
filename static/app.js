@@ -16,6 +16,10 @@ let currentSearchIndex = -1;
 let currentRootIndex = 0;
 // 所有根目录配置
 let rootDirs = [];
+// 当前编辑的文件内容（用于保存）
+let currentFileContent = [];
+// 是否是JSON文件
+let isJsonFile = false;
 
 // DOM 元素
 const listView = document.getElementById('listView');
@@ -222,16 +226,25 @@ function renderFileList(files) {
             <div>名称</div>
             <div>大小</div>
             <div>修改时间</div>
+            <div class="file-actions-header">操作</div>
         </div>
     `;
 
     files.forEach(file => {
+        const isJsonFile = !file.isDir && file.extension === 'json';
+        const actionButtons = file.isDir ? '' : `
+            <button class="btn-small btn-edit-list" onclick="event.stopPropagation(); editFile('${file.path}')" title="编辑">✏️</button>
+            ${isJsonFile ? `<button class="btn-small btn-advanced-edit-list" onclick="event.stopPropagation(); advancedEditFile('${file.path}')" title="高级编辑">⚙️</button>` : ''}
+            <button class="btn-small btn-delete-list" onclick="event.stopPropagation(); deleteFileFromList('${file.path}')" title="删除">🗑️</button>
+        `;
+
         html += `
             <div class="file-item" data-path="${file.path}" data-is-dir="${file.isDir}">
                 <div class="file-icon">${getFileIcon(file.isDir, file.extension)}</div>
                 <div class="file-name-cell">${file.name}</div>
                 <div class="file-size">${file.isDir ? '' : formatSize(file.size)}</div>
                 <div class="file-date">${formatDate(file.modTime)}</div>
+                <div class="file-actions">${actionButtons}</div>
             </div>
         `;
     });
@@ -277,6 +290,12 @@ async function viewFile(path, page = 1) {
         const data = await response.json();
         currentPage = data.page;
         totalPages = data.totalPages;
+
+        // 保存文件内容用于编辑
+        currentFileContent = data.lines;
+
+        // 检查是否是JSON文件
+        isJsonFile = path.toLowerCase().endsWith('.json');
 
         renderFileContent(data);
         showContentView();
@@ -373,7 +392,7 @@ function renderFileContent(data) {
         fileInfo.textContent += ` • 第 ${data.page}/${data.totalPages} 页`;
     }
 
-    // 显示内容并标记行号
+    // 显示内容并标记行号（只读模式）
     const linesHtml = data.lines.map((line, index) => {
         const lineNum = (data.page - 1) * LinesPerPage + index + 1;
         return `<div class="file-line" data-line-number="${lineNum}">${escapeHtml(line)}</div>`;
@@ -636,7 +655,13 @@ document.addEventListener('keydown', (e) => {
     if (contentView.style.display !== 'none') {
         // 文件内容视图下的快捷键
         if (e.key === 'Escape') {
-            showListView();
+            // 如果正在编辑，先关闭编辑器
+            const modal = document.getElementById('editModal');
+            if (modal && modal.style.display !== 'none') {
+                closeEditModal();
+            } else {
+                showListView();
+            }
         } else if (e.key === 'ArrowLeft' && currentPage > 1) {
             if (currentFilePath) viewFile(currentFilePath, currentPage - 1);
         } else if (e.key === 'ArrowRight' && currentPage < totalPages) {
@@ -644,6 +669,376 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// 编辑文件（从列表）
+async function editFile(path) {
+    try {
+        showLoading();
+
+        // 加载完整文件内容
+        const url = `/api/view?path=${encodeURIComponent(path)}&root=${currentRootIndex}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to load file');
+        }
+
+        const data = await response.json();
+        const fullContent = data.lines.join('\n');
+
+        const modal = document.createElement('div');
+        modal.id = 'editModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑文件: ${escapeHtml(data.name)}</h3>
+                    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="editTextarea" class="edit-textarea" style="min-height: 500px;">${escapeHtml(fullContent)}</textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                    <button class="btn btn-primary" onclick="saveFileEdit('${path}')">保存</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+
+        // 自动聚焦到文本框
+        document.getElementById('editTextarea').focus();
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 关闭编辑模态框
+function closeEditModal() {
+    const modal = document.getElementById('editModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 保存文件编辑
+async function saveFileEdit(path) {
+    const textarea = document.getElementById('editTextarea');
+    const newContent = textarea.value;
+
+    // 保存到服务器
+    try {
+        showLoading();
+        const response = await fetch(`/api/save?root=${currentRootIndex}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path: path,
+                content: newContent,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('保存失败');
+        }
+
+        const result = await response.json();
+        alert(result.message);
+        closeEditModal();
+
+        // 重新加载目录列表
+        await loadDirectory(currentPath);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 删除文件（从列表）
+async function deleteFileFromList(path) {
+    if (!confirm('确定要删除文件 "' + path.split('/').pop() + '" 吗？此操作不可撤销！')) {
+        return;
+    }
+
+    try {
+        showLoading();
+        const response = await fetch(`/api/delete?path=${encodeURIComponent(path)}&root=${currentRootIndex}`);
+
+        if (!response.ok) {
+            throw new Error('删除失败');
+        }
+
+        const result = await response.json();
+        alert(result.message);
+
+        // 重新加载目录列表
+        await loadDirectory(currentPath);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 高级编辑文件（JSON文件）
+async function advancedEditFile(path) {
+    try {
+        showLoading();
+
+        // 加载完整文件内容
+        const url = `/api/view?path=${encodeURIComponent(path)}&root=${currentRootIndex}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to load file');
+        }
+
+        const data = await response.json();
+        const fullContent = data.lines.join('\n');
+        const jsonData = JSON.parse(fullContent);
+
+        currentFilePath = path;
+
+        const modal = document.createElement('div');
+        modal.id = 'advancedEditModal';
+        modal.className = 'modal modal-large';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>JSON 高级编辑器: ${escapeHtml(data.name)}</h3>
+                    <button class="modal-close" onclick="closeAdvancedEditModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="jsonEditor"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeAdvancedEditModal()">取消</button>
+                    <button class="btn btn-primary" onclick="saveAdvancedEdit()">保存</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+
+        // 渲染 JSON 编辑器
+        renderJsonEditor(jsonData, document.getElementById('jsonEditor'));
+    } catch (error) {
+        showError('不是有效的JSON文件: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 渲染 JSON 编辑器
+function renderJsonEditor(data, container, path = '') {
+    container.innerHTML = '';
+
+    if (typeof data === 'object' && data !== null) {
+        if (Array.isArray(data)) {
+            // 数组类型
+            data.forEach((item, index) => {
+                const itemPath = path ? `${path}[${index}]` : `[${index}]`;
+                renderJsonItem(item, container, itemPath, index);
+            });
+            // 添加新项按钮
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn btn-secondary btn-add-field';
+            addBtn.textContent = '+ 添加项';
+            addBtn.onclick = () => addJsonArrayItem(data, path);
+            container.appendChild(addBtn);
+        } else {
+            // 对象类型
+            Object.keys(data).forEach((key) => {
+                const itemPath = path ? `${path}.${key}` : key;
+                renderJsonItem(data[key], container, itemPath, key);
+            });
+            // 添加新字段按钮
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn btn-secondary btn-add-field';
+            addBtn.textContent = '+ 添加字段';
+            addBtn.onclick = () => addJsonObjectField(data, path);
+            container.appendChild(addBtn);
+        }
+    }
+}
+
+// 渲染 JSON 项
+function renderJsonItem(value, container, path, key) {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'json-item';
+    itemDiv.dataset.path = path;
+
+    const isNested = typeof value === 'object' && value !== null;
+
+    itemDiv.innerHTML = `
+        <div class="json-item-header">
+            <span class="json-item-key">${escapeHtml(key.toString())}</span>
+            <span class="json-item-type">${getJsonType(value)}</span>
+            ${!isNested ? `<button class="btn btn-small btn-delete-field" onclick="deleteJsonField('${path}')">删除</button>` : ''}
+        </div>
+        ${isNested ? '<div class="json-item-children"></div>' : `<div class="json-item-value"><input type="text" class="json-value-input" value="${escapeHtml(value.toString())}" data-path="${path}"></div>`}
+    `;
+
+    container.appendChild(itemDiv);
+
+    if (isNested) {
+        const childrenContainer = itemDiv.querySelector('.json-item-children');
+        renderJsonEditor(value, childrenContainer, path);
+    }
+}
+
+// 获取 JSON 类型
+function getJsonType(value) {
+    if (value === null) return 'null';
+    if (Array.isArray(value)) return 'array';
+    return typeof value;
+}
+
+// 添加 JSON 对象字段
+function addJsonObjectField(data, path) {
+    const key = prompt('请输入新字段名称:');
+    if (!key) return;
+
+    if (key in data) {
+        alert('字段已存在');
+        return;
+    }
+
+    const defaultValue = prompt('请输入字段值（支持JSON格式）:');
+    if (defaultValue === null) return;
+
+    try {
+        data[key] = JSON.parse(defaultValue);
+    } catch {
+        data[key] = defaultValue;
+    }
+
+    // 重新渲染编辑器
+    const container = document.getElementById('jsonEditor');
+    renderJsonEditor(data, container, path);
+}
+
+// 添加 JSON 数组项
+function addJsonArrayItem(data, path) {
+    const value = prompt('请输入新项的值（支持JSON格式）:');
+    if (value === null) return;
+
+    try {
+        data.push(JSON.parse(value));
+    } catch {
+        data.push(value);
+    }
+
+    // 重新渲染编辑器
+    const container = document.getElementById('jsonEditor');
+    renderJsonEditor(data, container, path);
+}
+
+// 删除 JSON 字段
+function deleteJsonField(path) {
+    if (!confirm(`确定要删除字段 "${path}" 吗？`)) {
+        return;
+    }
+
+    // 从路径中获取并删除字段
+    const fullContent = currentFileContent.join('\n');
+    let jsonData = JSON.parse(fullContent);
+
+    const parts = path.split(/\[|\]|\./).filter(p => p);
+    let current = jsonData;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+        current = current[parts[i]];
+    }
+
+    delete current[parts[parts.length - 1]];
+
+    // 重新渲染编辑器
+    const container = document.getElementById('jsonEditor');
+    renderJsonEditor(jsonData, container, '');
+}
+
+// 关闭高级编辑模态框
+function closeAdvancedEditModal() {
+    const modal = document.getElementById('advancedEditModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 保存高级编辑
+async function saveAdvancedEdit() {
+    try {
+        showLoading();
+
+        // 从编辑器中收集所有修改
+        let jsonData = {};
+
+        // 收集所有输入的值
+        document.querySelectorAll('.json-value-input').forEach(input => {
+            const path = input.dataset.path;
+            const value = input.value;
+
+            // 尝试解析为JSON，如果失败则作为字符串
+            try {
+                const parsed = JSON.parse(value);
+                setJsonByPath(jsonData, path, parsed);
+            } catch {
+                setJsonByPath(jsonData, path, value);
+            }
+        });
+
+        // 保存到服务器
+        const newContent = JSON.stringify(jsonData, null, 2);
+
+        const response = await fetch(`/api/save?root=${currentRootIndex}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path: currentFilePath,
+                content: newContent,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('保存失败');
+        }
+
+        const result = await response.json();
+        alert(result.message);
+        closeAdvancedEditModal();
+
+        // 重新加载目录列表
+        await loadDirectory(currentPath);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+// 根据路径设置 JSON 值
+function setJsonByPath(obj, path, value) {
+    const parts = path.split(/\[|\]|\./).filter(p => p);
+    let current = obj;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (!(parts[i] in current)) {
+            current[parts[i]] = {};
+        }
+        current = current[parts[i]];
+    }
+
+    current[parts[parts.length - 1]] = value;
+}
 
 // 初始化
 window.onload = function() {
