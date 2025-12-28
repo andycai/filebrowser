@@ -29,8 +29,11 @@
                     <div class="toolbar-spacer"></div>
                     <button id="createFileBtn" class="btn btn-primary">新建文件</button>
                     <button id="createDirBtn" class="btn btn-primary">新建文件夹</button>
+                    <button id="uploadBtn" class="btn btn-success">上传文件</button>
+                    <input type="file" id="fileInput" style="display: none;" multiple>
                 </div>
                 <div class="file-list" id="fileList"></div>
+                <div class="upload-progress" id="uploadProgress" style="display: none;"></div>
             </div>
 
             <!-- 文件内容视图 -->

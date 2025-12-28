@@ -116,6 +116,7 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/delete", s.handleDelete)
 	http.HandleFunc("/api/create", s.handleCreate)
 	http.HandleFunc("/api/createDir", s.handleCreateDir)
+	http.HandleFunc("/api/upload", s.handleUpload)
 	http.HandleFunc("/", s.handleIndex)
 
 	addr := fmt.Sprintf(":%d", s.config.Port)
@@ -780,6 +781,81 @@ func (s *Server) handleCreateDir(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "目录创建成功",
+	})
+}
+
+// handleUpload 处理文件上传请求
+func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.handleError(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 解析表单，获取文件和路径
+	err := r.ParseMultipartForm(32 << 20) // 32MB 最大内存
+	if err != nil {
+		s.handleError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	path := r.FormValue("path")
+	if path == "" {
+		path = "/"
+	}
+
+	// 构建目标目录的完整路径
+	dirPath := s.getFullPath(path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(dirPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 获取上传的文件
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		s.handleError(w, err, http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// 构建目标文件的完整路径
+	fullPath := filepath.Join(dirPath, header.Filename)
+
+	// 再次检查完整路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查文件是否已存在
+	if _, err := os.Stat(fullPath); err == nil {
+		s.handleError(w, fmt.Errorf("file already exists"), http.StatusConflict)
+		return
+	}
+
+	// 创建目标文件
+	dst, err := os.Create(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+	defer dst.Close()
+
+	// 复制文件内容
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "文件上传成功",
 	})
 }
 

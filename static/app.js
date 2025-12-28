@@ -497,6 +497,20 @@ document.getElementById('createDirBtn').addEventListener('click', () => {
     createNewDir();
 });
 
+// 上传文件功能
+document.getElementById('uploadBtn').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+        uploadFiles(files);
+    }
+    // 清空input，允许重复选择同一文件
+    e.target.value = '';
+});
+
 // 搜索功能
 searchBtn.addEventListener('click', () => {
     const query = searchInput.value.trim();
@@ -1104,6 +1118,101 @@ async function createItem(type, name) {
     } finally {
         hideLoading();
     }
+}
+
+// 上传文件
+async function uploadFiles(files) {
+    const uploadProgress = document.getElementById('uploadProgress');
+    uploadProgress.style.display = 'block';
+    uploadProgress.innerHTML = '';
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progressId = `upload-progress-${i}`;
+
+        // 创建进度条
+        const progressItem = document.createElement('div');
+        progressItem.className = 'upload-progress-item';
+        progressItem.innerHTML = `
+            <div class="upload-progress-name">${escapeHtml(file.name)}</div>
+            <div class="upload-progress-bar">
+                <div class="upload-progress-fill" id="${progressId}" style="width: 0%"></div>
+                <div class="upload-progress-text" id="${progressId}-text">0%</div>
+            </div>
+        `;
+        uploadProgress.appendChild(progressItem);
+
+        try {
+            await uploadSingleFile(file, progressId, progressId + '-text');
+            successCount++;
+
+            // 标记完成
+            document.getElementById(progressId).parentElement.parentElement.classList.add('upload-progress-complete');
+        } catch (error) {
+            failCount++;
+            showError(`${file.name} 上传失败: ${error.message}`);
+            document.getElementById(progressId).style.background = '#e74c3c';
+        }
+    }
+
+    // 上传完成后显示总结
+    setTimeout(() => {
+        if (successCount > 0 && failCount === 0) {
+            alert(`成功上传 ${successCount} 个文件`);
+        } else if (successCount > 0 || failCount > 0) {
+            alert(`上传完成：成功 ${successCount} 个，失败 ${failCount} 个`);
+        }
+
+        // 隐藏进度条并重新加载目录
+        uploadProgress.style.display = 'none';
+        loadDirectory(currentPath);
+    }, 1000);
+}
+
+// 上传单个文件
+async function uploadSingleFile(file, progressId, textId) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', currentPath);
+
+    const xhr = new XMLHttpRequest();
+
+    return new Promise((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                const progressBar = document.getElementById(progressId);
+                const progressText = document.getElementById(textId);
+
+                if (progressBar) {
+                    progressBar.style.width = percentComplete + '%';
+                }
+                if (progressText) {
+                    progressText.textContent = percentComplete + '%';
+                }
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                resolve();
+            } else if (xhr.status === 409) {
+                reject(new Error('文件已存在'));
+            } else {
+                reject(new Error('上传失败'));
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            reject(new Error('网络错误'));
+        });
+
+        xhr.open('POST', `/api/upload?root=${currentRootIndex}`);
+        xhr.send(formData);
+    });
 }
 
 // 初始化
