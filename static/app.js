@@ -824,7 +824,19 @@ async function advancedEditFile(path) {
 
         const data = await response.json();
         const fullContent = data.lines.join('\n');
-        const jsonData = JSON.parse(fullContent);
+
+        // 验证文件内容不为空
+        if (!fullContent || fullContent.trim() === '') {
+            throw new Error('JSON文件为空');
+        }
+
+        // 尝试解析JSON
+        let jsonData;
+        try {
+            jsonData = JSON.parse(fullContent);
+        } catch (parseError) {
+            throw new Error('无效的JSON格式: ' + parseError.message);
+        }
 
         currentFilePath = path;
 
@@ -852,7 +864,7 @@ async function advancedEditFile(path) {
         // 渲染 JSON 编辑器
         renderJsonEditor(jsonData, document.getElementById('jsonEditor'));
     } catch (error) {
-        showError('不是有效的JSON文件: ' + error.message);
+        showError('无法打开JSON高级编辑器: ' + error.message);
     } finally {
         hideLoading();
     }
@@ -971,7 +983,15 @@ function deleteJsonField(path) {
 
     // 从路径中获取并删除字段
     const fullContent = currentFileContent.join('\n');
-    let jsonData = JSON.parse(fullContent);
+
+    // 验证JSON格式
+    let jsonData;
+    try {
+        jsonData = JSON.parse(fullContent);
+    } catch (parseError) {
+        showError('无法删除字段：无效的JSON格式 - ' + parseError.message);
+        return;
+    }
 
     const parts = path.split(/\[|\]|\./).filter(p => p);
     let current = jsonData;
@@ -1000,22 +1020,45 @@ async function saveAdvancedEdit() {
     try {
         showLoading();
 
-        // 从编辑器中收集所有修改
-        let jsonData = {};
+        // 从原始文件内容中解析JSON数据作为基础
+        const fullContent = currentFileContent.join('\n');
 
-        // 收集所有输入的值
-        document.querySelectorAll('.json-value-input').forEach(input => {
-            const path = input.dataset.path;
-            const value = input.value;
-
-            // 尝试解析为JSON，如果失败则作为字符串
-            try {
-                const parsed = JSON.parse(value);
-                setJsonByPath(jsonData, path, parsed);
-            } catch {
-                setJsonByPath(jsonData, path, value);
+        // 尝试解析原始JSON数据
+        let jsonData;
+        if (!fullContent || fullContent.trim() === '') {
+            // 文件为空，从编辑器重新构建数据结构
+            jsonData = buildJsonFromEditor();
+            if (!jsonData) {
+                jsonData = {}; // 默认创建空对象
             }
-        });
+        } else {
+            // 验证JSON格式
+            try {
+                jsonData = JSON.parse(fullContent);
+            } catch (parseError) {
+                throw new Error('无效的JSON格式: ' + parseError.message);
+            }
+
+            // 创建一个映射来跟踪哪些值被修改了
+            const modifiedValues = {};
+
+            // 收集所有输入的值
+            document.querySelectorAll('.json-value-input').forEach(input => {
+                const path = input.dataset.path;
+                const value = input.value;
+
+                // 尝试解析为JSON，如果失败则作为字符串
+                try {
+                    const parsed = JSON.parse(value);
+                    setJsonByPath(modifiedValues, path, parsed);
+                } catch {
+                    setJsonByPath(modifiedValues, path, value);
+                }
+            });
+
+            // 将修改的值合并到原始数据中
+            mergeJsonValues(jsonData, modifiedValues);
+        }
 
         // 保存到服务器
         const newContent = JSON.stringify(jsonData, null, 2);
@@ -1055,12 +1098,47 @@ function setJsonByPath(obj, path, value) {
 
     for (let i = 0; i < parts.length - 1; i++) {
         if (!(parts[i] in current)) {
-            current[parts[i]] = {};
+            // 如果下一部分是数字，创建数组，否则创建对象
+            const nextPart = parts[i + 1];
+            current[parts[i]] = !isNaN(parseInt(nextPart)) ? [] : {};
         }
         current = current[parts[i]];
     }
 
     current[parts[parts.length - 1]] = value;
+}
+
+// 从编辑器 DOM 构建完整的 JSON 数据
+function buildJsonFromEditor() {
+    const editor = document.getElementById('jsonEditor');
+    if (!editor) return null;
+
+    const result = {};
+
+    // 遍历所有输入框并构建 JSON 结构
+    document.querySelectorAll('.json-value-input').forEach(input => {
+        const path = input.dataset.path;
+        const value = input.value;
+
+        // 尝试解析为JSON，如果失败则作为字符串
+        let parsedValue;
+        try {
+            parsedValue = JSON.parse(value);
+        } catch {
+            parsedValue = value;
+        }
+
+        setJsonByPath(result, path, parsedValue);
+    });
+
+    return result;
+}
+
+// 合并修改的值到原始JSON数据
+function mergeJsonValues(target, source) {
+    for (const path in source) {
+        setJsonByPath(target, path, source[path]);
+    }
 }
 
 // 创建新文件
