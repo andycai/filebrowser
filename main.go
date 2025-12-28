@@ -22,9 +22,15 @@ const (
 
 // Config 配置结构
 type Config struct {
-	RootDirs  []RootDirConfig `json:"rootDirs"`
-	Port      int             `json:"port"`
-	StaticDir string          `json:"staticDir"`
+	RootDirs   []RootDirConfig   `json:"rootDirs"`
+	Port       int               `json:"port"`
+	StaticDirs []StaticDirConfig `json:"staticDirs"`
+}
+
+// StaticDirConfig 静态目录配置
+type StaticDirConfig struct {
+	Name string `json:"name"` // 显示名称
+	Path string `json:"path"` // 实际路径
 }
 
 // RootDirConfig 根目录配置
@@ -101,9 +107,27 @@ func NewServer(config *Config) *Server {
 
 // Start 启动服务器
 func (s *Server) Start() error {
-	// 静态文件服务
-	fs := http.FileServer(http.Dir(s.config.StaticDir))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	// 静态文件服务 - 支持多个静态目录
+	for _, staticDir := range s.config.StaticDirs {
+		// 确保路径是绝对路径
+		absPath, err := filepath.Abs(staticDir.Path)
+		if err != nil {
+			log.Printf("Failed to get absolute path for %s: %v", staticDir.Name, err)
+			continue
+		}
+
+		// 检查目录是否存在
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			log.Printf("Static directory does not exist: %s (%s)", staticDir.Name, absPath)
+			continue
+		}
+
+		// 为每个静态目录创建路由
+		mountPath := "/static/" + staticDir.Name + "/"
+		fs := http.FileServer(http.Dir(absPath))
+		http.Handle(mountPath, http.StripPrefix(mountPath, fs))
+		log.Printf("Mounted static directory '%s' at %s -> %s", staticDir.Name, mountPath, absPath)
+	}
 
 	// API 路由（按特定顺序注册，避免路由冲突）
 	// 更具体的路由必须先注册
@@ -125,6 +149,10 @@ func (s *Server) Start() error {
 	for _, root := range s.config.RootDirs {
 		log.Printf("  - %s: %s", root.Name, root.Path)
 	}
+	log.Printf("Static directories: %d", len(s.config.StaticDirs))
+	for _, staticDir := range s.config.StaticDirs {
+		log.Printf("  - %s: /static/%s/ -> %s", staticDir.Name, staticDir.Name, staticDir.Path)
+	}
 
 	return http.ListenAndServe(addr, nil)
 }
@@ -136,7 +164,17 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, filepath.Join(s.config.StaticDir, "index.html"))
+	// 从第一个静态目录加载 index.html（如果存在）
+	for _, staticDir := range s.config.StaticDirs {
+		indexPath := filepath.Join(staticDir.Path, "index.html")
+		if _, err := os.Stat(indexPath); err == nil {
+			http.ServeFile(w, r, indexPath)
+			return
+		}
+	}
+
+	// 如果找不到，返回404
+	s.handleError(w, fmt.Errorf("index.html not found"), http.StatusNotFound)
 }
 
 // handleViewRedirect 处理 /view/ 路径的重定向

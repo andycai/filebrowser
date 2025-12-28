@@ -14,5 +14,14 @@
     }
   ],
   "port": 8080,
-  "staticDir": "./static"
+  "staticDirs": [
+    {
+      "name": "default",
+      "path": "./static"
+    },
+    {
+      "name": "server",
+      "path": "./data/server"
+    }
+  ]
 }
