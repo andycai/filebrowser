@@ -203,7 +203,8 @@ async function loadDirectory(path, rootIndex = currentRootIndex) {
 
 // 渲染文件列表
 function renderFileList(files) {
-    if (files.length === 0) {
+    // 检查 files 是否为 null 或 undefined
+    if (!files || files.length === 0) {
         fileList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📭</div>
@@ -486,6 +487,14 @@ document.getElementById('upBtn').addEventListener('click', () => {
 
 document.getElementById('backBtn').addEventListener('click', () => {
     showListView();
+});
+
+document.getElementById('createFileBtn').addEventListener('click', () => {
+    createNewFile();
+});
+
+document.getElementById('createDirBtn').addEventListener('click', () => {
+    createNewDir();
 });
 
 // 搜索功能
@@ -1038,6 +1047,63 @@ function setJsonByPath(obj, path, value) {
     }
 
     current[parts[parts.length - 1]] = value;
+}
+
+// 创建新文件
+function createNewFile() {
+    const fileName = prompt('请输入文件名:');
+    if (!fileName) return;
+    if (fileName.includes('/') || fileName.includes('\\')) {
+        showError('文件名不能包含路径分隔符');
+        return;
+    }
+    createItem('file', fileName);
+}
+
+// 创建新文件夹
+function createNewDir() {
+    const dirName = prompt('请输入文件夹名:');
+    if (!dirName) return;
+    if (dirName.includes('/') || dirName.includes('\\')) {
+        showError('文件夹名不能包含路径分隔符');
+        return;
+    }
+    createItem('dir', dirName);
+}
+
+// 创建文件或文件夹
+async function createItem(type, name) {
+    try {
+        showLoading();
+        const apiUrl = type === 'file' ? '/api/create' : '/api/createDir';
+        const response = await fetch(`${apiUrl}?root=${currentRootIndex}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path: currentPath,
+                name: name,
+            }),
+        });
+
+        if (!response.ok) {
+            if (response.status === 409) {
+                throw new Error(type === 'file' ? '文件已存在' : '文件夹已存在');
+            }
+            throw new Error('创建失败');
+        }
+
+        const result = await response.json();
+        alert(result.message);
+
+        // 重新加载目录列表
+        await loadDirectory(currentPath);
+    } catch (error) {
+        showError(error.message);
+    } finally {
+        hideLoading();
+    }
 }
 
 // 初始化

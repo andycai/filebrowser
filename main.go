@@ -68,6 +68,12 @@ type SaveRequest struct {
 	Content string `json:"content"`
 }
 
+// CreateRequest 创建文件请求
+type CreateRequest struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
 // Server 文件浏览服务器
 type Server struct {
 	config *Config
@@ -108,6 +114,8 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/view", s.handleView)
 	http.HandleFunc("/api/save", s.handleSave)
 	http.HandleFunc("/api/delete", s.handleDelete)
+	http.HandleFunc("/api/create", s.handleCreate)
+	http.HandleFunc("/api/createDir", s.handleCreateDir)
 	http.HandleFunc("/", s.handleIndex)
 
 	addr := fmt.Sprintf(":%d", s.config.Port)
@@ -658,6 +666,120 @@ func (s *Server) handleDelete(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "文件删除成功",
+	})
+}
+
+// handleCreate 处理创建文件请求
+func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.handleError(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.handleError(w, fmt.Errorf("invalid request body"), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		s.handleError(w, fmt.Errorf("name is required"), http.StatusBadRequest)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 构建目录的完整路径
+	dirPath := s.getFullPath(req.Path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(dirPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 构建新文件的完整路径
+	fullPath := filepath.Join(dirPath, req.Name)
+
+	// 再次检查完整路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查文件是否已存在
+	if _, err := os.Stat(fullPath); err == nil {
+		s.handleError(w, fmt.Errorf("file already exists"), http.StatusConflict)
+		return
+	}
+
+	// 创建空文件
+	if err := os.WriteFile(fullPath, []byte{}, 0644); err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "文件创建成功",
+	})
+}
+
+// handleCreateDir 处理创建目录请求
+func (s *Server) handleCreateDir(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		s.handleError(w, fmt.Errorf("method not allowed"), http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		s.handleError(w, fmt.Errorf("invalid request body"), http.StatusBadRequest)
+		return
+	}
+
+	if req.Name == "" {
+		s.handleError(w, fmt.Errorf("name is required"), http.StatusBadRequest)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 构建父目录的完整路径
+	dirPath := s.getFullPath(req.Path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(dirPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 构建新目录的完整路径
+	fullPath := filepath.Join(dirPath, req.Name)
+
+	// 再次检查完整路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查目录是否已存在
+	if _, err := os.Stat(fullPath); err == nil {
+		s.handleError(w, fmt.Errorf("directory already exists"), http.StatusConflict)
+		return
+	}
+
+	// 创建目录
+	if err := os.MkdirAll(fullPath, 0755); err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "目录创建成功",
 	})
 }
 

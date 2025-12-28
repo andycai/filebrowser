@@ -98,6 +98,10 @@ h1 {
     flex-wrap: wrap;
 }
 
+.toolbar-spacer {
+    flex: 1;
+}
+
 .search-box {
     display: flex;
     gap: 5px;
