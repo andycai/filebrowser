@@ -62,6 +62,17 @@ function formatDate(date) {
     });
 }
 
+// 工具函数：规范化路径（将 Windows 反斜杠转换为正斜杠，并移除尾部斜杠）
+function normalizePath(path) {
+    if (!path) return '/';
+    // 将所有反斜杠转换为正斜杠
+    let normalized = path.replace(/\\/g, '/');
+    // 移除尾部斜杠，但保留根目录的斜杠
+    normalized = normalized.replace(/\/+$/, '');
+    if (normalized === '') normalized = '/';
+    return normalized;
+}
+
 // 工具函数：获取文件图标
 function getFileIcon(isDir, extension) {
     if (isDir) return '📁';
@@ -176,6 +187,9 @@ function updateBreadcrumb(path) {
 async function loadDirectory(path, rootIndex = currentRootIndex) {
     try {
         showLoading();
+        // 规范化路径
+        path = normalizePath(path);
+
         const response = await fetch(`/api/list?path=${encodeURIComponent(path)}&root=${rootIndex}`);
 
         if (!response.ok) {
@@ -271,6 +285,8 @@ function renderFileList(files) {
 async function viewFile(path, page = 1) {
     try {
         showLoading();
+        // 规范化路径
+        path = normalizePath(path);
         currentFilePath = path; // 保存当前文件路径
 
         // 从文件路径中提取目录路径，保存到 currentPath
@@ -481,7 +497,16 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
 });
 
 document.getElementById('upBtn').addEventListener('click', () => {
-    const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+    // 规范化路径
+    let normalizedPath = normalizePath(currentPath);
+
+    // 如果已经是根目录，不执行操作
+    if (normalizedPath === '/') {
+        return;
+    }
+
+    // 获取父目录路径
+    const parentPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/')) || '/';
     loadDirectory(parentPath);
 });
 
@@ -697,6 +722,8 @@ document.addEventListener('keydown', (e) => {
 async function editFile(path) {
     try {
         showLoading();
+        // 规范化路径
+        path = normalizePath(path);
 
         // 加载完整文件内容
         const url = `/api/view?path=${encodeURIComponent(path)}&root=${currentRootIndex}`;
@@ -785,6 +812,9 @@ async function saveFileEdit(path) {
 
 // 删除文件（从列表）
 async function deleteFileFromList(path) {
+    // 规范化路径
+    path = normalizePath(path);
+
     if (!confirm('确定要删除文件 "' + path.split('/').pop() + '" 吗？此操作不可撤销！')) {
         return;
     }
@@ -813,6 +843,8 @@ async function deleteFileFromList(path) {
 async function advancedEditFile(path) {
     try {
         showLoading();
+        // 规范化路径
+        path = normalizePath(path);
 
         // 加载完整文件内容
         const url = `/api/view?path=${encodeURIComponent(path)}&root=${currentRootIndex}`;
