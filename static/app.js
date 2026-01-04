@@ -73,6 +73,22 @@ function normalizePath(path) {
     return normalized;
 }
 
+// 工具函数：判断是否为文本文件
+function isTextFile(extension) {
+    if (!extension) return false; // 无扩展名的文件默认不是文本文件
+    const textExtensions = [
+        'txt', 'md', 'js', 'go', 'py', 'java', 'cpp', 'c', 'h', 'hpp',
+        'html', 'htm', 'css', 'scss', 'sass', 'less',
+        'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
+        'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd',
+        'rs', 'ts', 'tsx', 'jsx', 'vue', 'svelte',
+        'php', 'rb', 'pl', 'lua', 'r', 'sql',
+        'log', 'csv', 'tsv',
+        'gitignore', 'gitattributes', 'env', 'dockerignore'
+    ];
+    return textExtensions.includes(extension.toLowerCase());
+}
+
 // 工具函数：获取文件图标
 function getFileIcon(isDir, extension) {
     if (isDir) return '📁';
@@ -163,22 +179,26 @@ function updateRootSelect() {
 // 更新面包屑导航
 function updateBreadcrumb(path) {
     const parts = path.split('/').filter(p => p);
-    let html = '<span class="breadcrumb-item" data-path="/">🏠 根目录</span>';
+    let html = '<span class="breadcrumb-item">🏠 根目录</span>';
 
-    let currentPath = '';
     parts.forEach((part, index) => {
-        currentPath += '/' + part;
         html += '<span class="breadcrumb-separator">/</span>';
-        html += `<span class="breadcrumb-item" data-path="${currentPath}">${part}</span>`;
+        html += `<span class="breadcrumb-item">${part}</span>`;
     });
 
     breadcrumb.innerHTML = html;
 
     // 添加点击事件
-    document.querySelectorAll('.breadcrumb-item').forEach(item => {
+    const items = breadcrumb.querySelectorAll('.breadcrumb-item');
+    items.forEach((item, index) => {
         item.addEventListener('click', () => {
-            const path = item.getAttribute('data-path');
-            loadDirectory(path);
+            // 根据索引重建路径
+            if (index === 0) {
+                loadDirectory('/');
+            } else {
+                const clickedPath = '/' + parts.slice(0, index).join('/');
+                loadDirectory(clickedPath);
+            }
         });
     });
 }
@@ -271,14 +291,34 @@ function renderFileList(files) {
         item.addEventListener('click', () => {
             const path = item.getAttribute('data-path');
             const isDir = item.getAttribute('data-is-dir') === 'true';
+            const extension = path.split('.').pop().toLowerCase();
 
             if (isDir) {
                 loadDirectory(path);
-            } else {
+            } else if (isTextFile(extension)) {
+                // 文本文件：查看内容
                 viewFile(path);
+            } else {
+                // 非文本文件：直接下载
+                downloadFile(path);
             }
         });
     });
+}
+
+// 下载文件
+function downloadFile(path) {
+    // 规范化路径
+    path = normalizePath(path);
+    // 创建下载链接
+    const downloadUrl = `/api/download?path=${encodeURIComponent(path)}&root=${currentRootIndex}`;
+    // 创建隐藏的 a 标签并点击
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = path.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // 查看文件内容

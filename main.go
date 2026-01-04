@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -136,6 +137,7 @@ func (s *Server) Start() error {
 	http.HandleFunc("/api/search", s.handleSearch)
 	http.HandleFunc("/api/list", s.handleList)
 	http.HandleFunc("/api/view", s.handleView)
+	http.HandleFunc("/api/download", s.handleDownload)
 	http.HandleFunc("/api/save", s.handleSave)
 	http.HandleFunc("/api/delete", s.handleDelete)
 	http.HandleFunc("/api/create", s.handleCreate)
@@ -433,6 +435,62 @@ func (s *Server) countLines(file *os.File) int {
 		count++
 	}
 	return count
+}
+
+// handleDownload 处理文件下载请求
+func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		s.handleError(w, fmt.Errorf("path parameter is required"), http.StatusBadRequest)
+		return
+	}
+
+	rootIndex := getRootIndex(r)
+
+	// 构建完整路径
+	fullPath := s.getFullPath(path, rootIndex)
+
+	// 检查路径是否在根目录内
+	if !s.isPathSafe(fullPath, rootIndex) {
+		s.handleError(w, fmt.Errorf("access denied"), http.StatusForbidden)
+		return
+	}
+
+	// 检查是否为文件
+	info, err := os.Stat(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusNotFound)
+		return
+	}
+
+	if info.IsDir() {
+		s.handleError(w, fmt.Errorf("path is a directory"), http.StatusBadRequest)
+		return
+	}
+
+	// 读取文件内容
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		s.handleError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	// 获取文件名
+	fileName := filepath.Base(fullPath)
+
+	// 根据 MIME 类型设置 Content-Type
+	mimeType := mime.TypeByExtension(filepath.Ext(fullPath))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	// 设置下载响应头
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+
+	// 写入文件内容
+	w.Write(content)
 }
 
 // getFullPath 获取完整路径
