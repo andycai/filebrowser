@@ -248,11 +248,21 @@ function renderFileList(files) {
         return;
     }
 
-    // 排序：文件夹在前，然后按名称排序
+    // 排序：文件夹在前（按名称排序），文件在后（按修改时间降序）
     files.sort((a, b) => {
+        // 文件夹和文件分开
         if (a.isDir && !b.isDir) return -1;
         if (!a.isDir && b.isDir) return 1;
-        return a.name.localeCompare(b.name);
+
+        // 文件夹：按名称排序
+        if (a.isDir && b.isDir) {
+            return a.name.localeCompare(b.name);
+        }
+
+        // 文件：按修改时间降序（最新的在前）
+        const timeA = new Date(a.modTime).getTime();
+        const timeB = new Date(b.modTime).getTime();
+        return timeB - timeA;
     });
 
     let html = `
