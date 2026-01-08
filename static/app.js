@@ -31,7 +31,6 @@ const fileName = document.getElementById('fileName');
 const fileInfo = document.getElementById('fileInfo');
 const loading = document.getElementById('loading');
 const pagination = document.getElementById('pagination');
-const paginationBottom = document.getElementById('paginationBottom');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const searchResults = document.getElementById('searchResults');
@@ -225,9 +224,8 @@ async function loadDirectory(path, rootIndex = currentRootIndex) {
         // 更新根目录选择器
         rootSelect.value = currentRootIndex;
 
-        // 只切换视图，不重新加载
-        listView.style.display = 'block';
-        contentView.style.display = 'none';
+        // 确保文件内容视图被隐藏
+        document.getElementById('contentView').style.display = 'none';
     } catch (error) {
         showError(error.message);
     } finally {
@@ -269,26 +267,25 @@ function renderFileList(files) {
         <div class="file-header">
             <div></div>
             <div>名称</div>
-            <div>大小</div>
-            <div>修改时间</div>
             <div class="file-actions-header">操作</div>
         </div>
     `;
 
     files.forEach(file => {
         const isJsonFile = !file.isDir && file.extension === 'json';
+        // 对路径进行 HTML 转义，避免 Windows 路径中的反斜杠被当作转义符
+        const escapedPath = escapeHtml(file.path);
+
         const actionButtons = file.isDir ? '' : `
-            <button class="btn-small btn-edit-list" onclick="event.stopPropagation(); editFile('${file.path}')" title="编辑">✏️</button>
-            ${isJsonFile ? `<button class="btn-small btn-advanced-edit-list" onclick="event.stopPropagation(); advancedEditFile('${file.path}')" title="高级编辑">⚙️</button>` : ''}
-            <button class="btn-small btn-delete-list" onclick="event.stopPropagation(); deleteFileFromList('${file.path}')" title="删除">🗑️</button>
+            <button class="btn-small btn-edit-list btn-action" data-path="${file.path}" data-action="edit" title="编辑">✏️</button>
+            ${isJsonFile ? `<button class="btn-small btn-advanced-edit-list btn-action" data-path="${file.path}" data-action="advanced-edit" title="高级编辑">⚙️</button>` : ''}
+            <button class="btn-small btn-delete-list btn-action" data-path="${file.path}" data-action="delete" title="删除">🗑️</button>
         `;
 
         html += `
             <div class="file-item" data-path="${file.path}" data-is-dir="${file.isDir}">
                 <div class="file-icon">${getFileIcon(file.isDir, file.extension)}</div>
                 <div class="file-name-cell">${file.name}</div>
-                <div class="file-size">${file.isDir ? '' : formatSize(file.size)}</div>
-                <div class="file-date">${formatDate(file.modTime)}</div>
                 <div class="file-actions">${actionButtons}</div>
             </div>
         `;
@@ -296,7 +293,7 @@ function renderFileList(files) {
 
     fileList.innerHTML = html;
 
-    // 添加点击事件
+    // 添加文件项点击事件
     document.querySelectorAll('.file-item').forEach(item => {
         item.addEventListener('click', () => {
             const path = item.getAttribute('data-path');
@@ -311,6 +308,27 @@ function renderFileList(files) {
             } else {
                 // 非文本文件：直接下载
                 downloadFile(path);
+            }
+        });
+    });
+
+    // 添加操作按钮点击事件
+    document.querySelectorAll('.btn-action').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡，避免触发文件项点击
+            const path = btn.getAttribute('data-path');
+            const action = btn.getAttribute('data-action');
+
+            switch (action) {
+                case 'edit':
+                    editFile(path);
+                    break;
+                case 'advanced-edit':
+                    advancedEditFile(path);
+                    break;
+                case 'delete':
+                    deleteFileFromList(path);
+                    break;
             }
         });
     });
@@ -402,9 +420,12 @@ async function viewFileAndScroll(path, page, lineNumber) {
         showContentView();
 
         // 等待 DOM 更新后滚动到指定行
-        setTimeout(() => {
-            scrollToLine(lineNumber);
-        }, 100);
+        // 使用 requestAnimationFrame 确保 DOM 完全渲染
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                scrollToLine(lineNumber);
+            }, 50);
+        });
     } catch (error) {
         showError(error.message);
     } finally {
@@ -415,7 +436,10 @@ async function viewFileAndScroll(path, page, lineNumber) {
 // 滚动到指定行并高亮显示
 function scrollToLine(lineNumber) {
     const lineElement = fileContent.querySelector(`[data-line-number="${lineNumber}"]`);
-    if (!lineElement) return;
+    if (!lineElement) {
+        console.warn(`Line ${lineNumber} not found in DOM`);
+        return;
+    }
 
     // 移除之前的高亮
     fileContent.querySelectorAll('.line-highlight').forEach(el => {
@@ -426,7 +450,7 @@ function scrollToLine(lineNumber) {
     lineElement.classList.add('line-highlight');
 
     // 计算滚动位置：目标行前面显示5行，即从顶部开始第6行位置
-    const container = fileContent;
+    const container = fileContent.parentElement;
     const lineTop = lineElement.offsetTop;
     const lineHeight = lineElement.clientHeight;
 
@@ -471,10 +495,8 @@ function renderFileContent(data) {
     if (data.isPartial) {
         renderPagination(currentFilePath, data.page, data.totalPages);
         pagination.style.display = 'flex';
-        paginationBottom.style.display = 'flex';
     } else {
         pagination.style.display = 'none';
-        paginationBottom.style.display = 'none';
     }
 }
 
@@ -495,7 +517,6 @@ function renderPagination(path, page, totalPages) {
     html += createButton('末页 »', totalPages, page === totalPages);
 
     pagination.innerHTML = html;
-    paginationBottom.innerHTML = html;
 
     // 添加分页按钮事件监听
     document.querySelectorAll('.pagination-btn').forEach(btn => {
@@ -521,24 +542,25 @@ function escapeJsString(str) {
     return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
 }
 
-// 显示列表视图
+// 返回列表视图
 function showListView() {
-    listView.style.display = 'block';
-    contentView.style.display = 'none';
+    // 隐藏文件内容视图
+    document.getElementById('contentView').style.display = 'none';
     searchResults.style.display = 'none';
     searchNav.style.display = 'none';
     searchInput.value = ''; // 清空搜索框
     currentSearchResults = []; // 清空搜索结果
     currentSearchIndex = -1;
 
+    // 侧边栏保持显示
     // 加载目录内容
     loadDirectory(currentPath);
 }
 
 // 显示内容视图
 function showContentView() {
-    listView.style.display = 'none';
-    contentView.style.display = 'block';
+    // 显示文件内容视图
+    document.getElementById('contentView').style.display = 'flex';
 }
 
 // 事件监听
@@ -1377,18 +1399,48 @@ async function uploadSingleFile(file, progressId, textId) {
 
 // 初始化
 window.onload = function() {
+    // 添加侧边栏切换功能
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+    }
+
+    // 添加侧边栏拖动调整宽度功能
+    const resizeHandle = document.getElementById('sidebarResizeHandle');
+    let isResizing = false;
+
+    if (resizeHandle && sidebar) {
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizeHandle.classList.add('active');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const newWidth = e.clientX;
+            // 限制最小和最大宽度
+            if (newWidth >= 200 && newWidth <= 600) {
+                sidebar.style.width = newWidth + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                resizeHandle.classList.remove('active');
+            }
+        });
+    }
+
     // 先加载根目录列表
     loadRoots().then(() => {
-        // 检查 URL 参数，如果有 file 参数则直接打开该文件
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileParam = urlParams.get('file');
-
-        if (fileParam) {
-            // 直接打开文件
-            viewFile(decodeURIComponent(fileParam), 1);
-        } else {
-            // 加载根目录
-            loadDirectory('/');
-        }
+        // 默认显示文件列表
+        loadDirectory('/');
     });
 };

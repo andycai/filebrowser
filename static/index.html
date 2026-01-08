@@ -7,61 +7,100 @@
     <link rel="stylesheet" href="/static/default/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
+    <!-- 顶部标题栏 -->
+    <header class="titlebar">
+        <div class="titlebar-left">
+            <button id="sidebarToggle" class="btn-icon" title="切换侧边栏">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M3 3h10v1H3V3zm0 4h10v1H3V7zm0 4h6v1H3v-1z"/>
+                </svg>
+            </button>
             <h1>📁 文件浏览器</h1>
-            <!-- 根目录切换器 -->
-            <div class="root-switcher" id="rootSwitcher">
-                <label for="rootSelect">根目录:</label>
-                <select id="rootSelect" class="root-select">
-                    <option value="">加载中...</option>
-                </select>
-            </div>
+        </div>
+        <div class="titlebar-center">
             <div class="breadcrumb" id="breadcrumb"></div>
-        </header>
+        </div>
+        <div class="titlebar-right">
+            <select id="rootSelect" class="root-select-compact">
+                <option value="">加载中...</option>
+            </select>
+        </div>
+    </header>
 
-        <main>
-            <!-- 文件列表视图 -->
-            <div id="listView" class="view">
-                <div class="toolbar">
-                    <button id="refreshBtn" class="btn btn-secondary">刷新</button>
-                    <button id="upBtn" class="btn btn-secondary">返回上级</button>
-                    <div class="toolbar-spacer"></div>
-                    <button id="createFileBtn" class="btn btn-primary">新建文件</button>
-                    <button id="createDirBtn" class="btn btn-primary">新建文件夹</button>
-                    <button id="uploadBtn" class="btn btn-success">上传文件</button>
-                    <input type="file" id="fileInput" style="display: none;" multiple>
-                </div>
-                <div class="file-list" id="fileList"></div>
-                <div class="upload-progress" id="uploadProgress" style="display: none;"></div>
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 左侧侧边栏 -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-resize-handle" id="sidebarResizeHandle"></div>
+            <div class="sidebar-header">
+                <h2>文件列表</h2>
             </div>
+            <div class="sidebar-toolbar">
+                <button id="refreshBtn" class="btn btn-small" title="刷新">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M13.5 8c0-3.037-2.463-5.5-5.5-5.5S2.5 4.963 2.5 8s2.463 5.5 5.5 5.5c1.386 0 2.65-.513 3.62-1.357l-.722-.817A4.482 4.482 0 0 0 8 13c-2.757 0-5-2.243-5-5s2.243-5 5-5 5 2.243 5 5c0 .868-.243 1.68-.663 2.386l.76.754A5.962 5.962 0 0 0 14 8c0-3.309-2.691-6-6-6s-6 2.691-6 6 2.691 6 6 6z"/>
+                        <path d="M8 3.5v4l3 2-.75 1.25L6.5 8V3.5z"/>
+                    </svg>
+                </button>
+                <button id="upBtn" class="btn btn-small" title="返回上级">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/>
+                    </svg>
+                </button>
+                <div class="toolbar-spacer"></div>
+                <button id="createFileBtn" class="btn btn-small" title="新建文件">📄</button>
+                <button id="createDirBtn" class="btn btn-small" title="新建文件夹">📁</button>
+                <button id="uploadBtn" class="btn btn-small" title="上传文件">⬆️</button>
+                <input type="file" id="fileInput" style="display: none;" multiple>
+            </div>
+            <div class="file-list" id="fileList"></div>
+            <div class="upload-progress" id="uploadProgress" style="display: none;"></div>
+        </aside>
 
+        <!-- 右侧内容区域 -->
+        <main id="mainContent" class="main-content">
             <!-- 文件内容视图 -->
-            <div id="contentView" class="view" style="display: none;">
-                <div class="toolbar">
-                    <button id="backBtn" class="btn btn-secondary">返回</button>
+            <div id="contentView" class="content-view">
+                <!-- 顶部工具栏 -->
+                <div class="content-toolbar">
+                    <button id="backBtn" class="btn btn-small" title="返回列表">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/>
+                        </svg>
+                    </button>
                     <span id="fileName" class="file-name"></span>
                     <span id="fileInfo" class="file-info"></span>
+                    <div class="toolbar-spacer"></div>
                     <div class="search-box">
-                        <input type="text" id="searchInput" placeholder="搜索日志内容..." class="search-input">
-                        <button id="searchBtn" class="btn btn-primary">搜索</button>
+                        <input type="text" id="searchInput" placeholder="搜索..." class="search-input">
+                        <button id="searchBtn" class="btn btn-small btn-primary">🔍</button>
                     </div>
                     <div class="search-nav" id="searchNav" style="display: none;">
-                        <button id="prevResultBtn" class="btn btn-secondary" title="上一个结果">↑</button>
+                        <button id="prevResultBtn" class="btn btn-small" title="上一个结果">↑</button>
                         <span id="searchNavInfo" class="search-nav-info">0/0</span>
-                        <button id="nextResultBtn" class="btn btn-secondary" title="下一个结果">↓</button>
+                        <button id="nextResultBtn" class="btn btn-small" title="下一个结果">↓</button>
                     </div>
                 </div>
+
+                <!-- 搜索结果 -->
                 <div class="search-results" id="searchResults" style="display: none;"></div>
-                <div class="pagination" id="pagination"></div>
-                <pre id="fileContent" class="file-content"></pre>
-                <div class="pagination" id="paginationBottom"></div>
+
+                <!-- 文件内容 -->
+                <div class="file-content-wrapper">
+                    <pre id="fileContent" class="file-content"></pre>
+                </div>
+
+                <!-- 分页控件 -->
+                <div class="pagination-overlay">
+                    <div class="pagination" id="pagination"></div>
+                </div>
             </div>
         </main>
+    </div>
 
-        <div id="loading" class="loading" style="display: none;">
-            <div class="spinner"></div>
-        </div>
+    <!-- Loading -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
     </div>
 
     <script src="/static/default/app.js?v=2"></script>
