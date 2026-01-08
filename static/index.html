@@ -15,7 +15,12 @@
                     <path d="M3 3h10v1H3V3zm0 4h10v1H3V7zm0 4h6v1H3v-1z"/>
                 </svg>
             </button>
-            <h1>📁 文件浏览器</h1>
+            <h1>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/>
+                </svg>
+                文件浏览器
+            </h1>
         </div>
         <div class="titlebar-center">
             <div class="breadcrumb" id="breadcrumb"></div>
@@ -48,9 +53,22 @@
                     </svg>
                 </button>
                 <div class="toolbar-spacer"></div>
-                <button id="createFileBtn" class="btn btn-small" title="新建文件">📄</button>
-                <button id="createDirBtn" class="btn btn-small" title="新建文件夹">📁</button>
-                <button id="uploadBtn" class="btn btn-small" title="上传文件">⬆️</button>
+                <button id="createFileBtn" class="btn btn-small" title="新建文件">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/>
+                    </svg>
+                </button>
+                <button id="createDirBtn" class="btn btn-small" title="新建文件夹">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/>
+                    </svg>
+                </button>
+                <button id="uploadBtn" class="btn btn-small" title="上传文件">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M.5 9.9a.5.5 0 01.5.5v2.5a1 1 0 001 1h12a1 1 0 001-1v-2.5a.5.5 0 011 0v2.5a2 2 0 01-2 2H2a2 2 0 01-2-2v-2.5a.5.5 0 01.5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 01.708 0l3 3a.5.5 0 01-.708.708L8.5 2.707V11.5a.5.5 0 01-1 0V2.707L5.354 4.854a.5.5 0 11-.708-.708l3-3z"/>
+                    </svg>
+                </button>
                 <input type="file" id="fileInput" style="display: none;" multiple>
             </div>
             <div class="file-list" id="fileList"></div>
@@ -63,17 +81,33 @@
             <div id="contentView" class="content-view">
                 <!-- 顶部工具栏 -->
                 <div class="content-toolbar">
-                    <button id="backBtn" class="btn btn-small" title="返回列表">
+                    <button id="editFileBtn" class="btn btn-small" title="编辑" style="display: none;">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M6 12.796V3.204L11.481 8 6 12.796zm.659.753 5.48-4.796a1 1 0 0 0 0-1.506L6.66 2.451C6.011 1.885 5 2.345 5 3.204v9.592a1 1 0 0 0 1.659.753z"/>
+                            <path d="M12.854 2.854a.5.5 0 00-.708 0L11 4l1.5 1.5 1.146-1.146a.5.5 0 000-.708l-.792-.792zM10 5l-8.5 8.5V15h1.5L11.5 6.5 10 5z"/>
                         </svg>
+                    </button>
+                    <button id="advancedEditBtn" class="btn btn-small" title="高级编辑(JSON)" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1zM6 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/>
+                        </svg>
+                        高级编辑
+                    </button>
+                    <button id="saveFileBtn" class="btn btn-small btn-primary" title="保存" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/>
+                        </svg>
+                        保存
                     </button>
                     <span id="fileName" class="file-name"></span>
                     <span id="fileInfo" class="file-info"></span>
                     <div class="toolbar-spacer"></div>
                     <div class="search-box">
                         <input type="text" id="searchInput" placeholder="搜索..." class="search-input">
-                        <button id="searchBtn" class="btn btn-small btn-primary">🔍</button>
+                        <button id="searchBtn" class="btn btn-small btn-primary" title="搜索">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.1zM12 6.5a5.5 5.0 11-11 0 5.5 5.5 0 0111 0z"/>
+                            </svg>
+                        </button>
                     </div>
                     <div class="search-nav" id="searchNav" style="display: none;">
                         <button id="prevResultBtn" class="btn btn-small" title="上一个结果">↑</button>
@@ -88,6 +122,7 @@
                 <!-- 文件内容 -->
                 <div class="file-content-wrapper">
                     <pre id="fileContent" class="file-content"></pre>
+                    <textarea id="fileEditor" class="file-content" style="display: none;"></textarea>
                 </div>
 
                 <!-- 分页控件 -->
@@ -103,6 +138,6 @@
         <div class="spinner"></div>
     </div>
 
-    <script src="/static/default/app.js?v=2"></script>
+    <script src="/static/default/app.js?v=6"></script>
 </body>
 </html>

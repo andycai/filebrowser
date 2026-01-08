@@ -221,7 +221,15 @@ body {
 }
 
 .file-icon {
-    font-size: 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cccccc;
+}
+
+.file-icon svg {
+    display: block;
 }
 
 .file-name-cell {
@@ -268,6 +276,21 @@ body {
     color: #d4d4d4;
     white-space: pre;
     overflow-x: auto;
+}
+
+.file-content:focus {
+    outline: none;
+}
+
+textarea.file-content {
+    width: 100%;
+    height: 100%;
+    display: block;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    resize: none;
+    border: none;
 }
 
 .file-line {

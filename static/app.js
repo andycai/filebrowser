@@ -22,11 +22,11 @@ let currentFileContent = [];
 let isJsonFile = false;
 
 // DOM 元素
-const listView = document.getElementById('listView');
 const contentView = document.getElementById('contentView');
 const fileList = document.getElementById('fileList');
 const breadcrumb = document.getElementById('breadcrumb');
 const fileContent = document.getElementById('fileContent');
+const fileEditor = document.getElementById('fileEditor');
 const fileName = document.getElementById('fileName');
 const fileInfo = document.getElementById('fileInfo');
 const loading = document.getElementById('loading');
@@ -90,34 +90,45 @@ function isTextFile(extension) {
 
 // 工具函数：获取文件图标
 function getFileIcon(isDir, extension) {
-    if (isDir) return '📁';
-    if (!extension) return '📄';
+    // 使用 SVG 图标代替 emoji，更精致
+    const size = 'width="14" height="14" viewBox="0 0 16 16" fill="currentColor"';
+
+    if (isDir) {
+        return `<svg ${size}><path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/></svg>`;
+    }
+
+    if (!extension) {
+        return `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
+    }
+
     const icons = {
-        'txt': '📄',
-        'md': '📝',
-        'js': '📜',
-        'go': '📘',
-        'py': '🐍',
-        'java': '☕',
-        'cpp': '⚙️',
-        'c': '⚙️',
-        'html': '🌐',
-        'css': '🎨',
-        'json': '📋',
-        'xml': '📋',
-        'pdf': '📕',
-        'zip': '📦',
-        'tar': '📦',
-        'gz': '📦',
-        'jpg': '🖼️',
-        'jpeg': '🖼️',
-        'png': '🖼️',
-        'gif': '🖼️',
-        'mp3': '🎵',
-        'mp4': '🎬',
-        'mov': '🎬'
+        'txt': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`,
+        'md': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM3 5v9a1 1 0 001 1h8a1 1 0 001-1V5H3z"/></svg>`,
+        'js': `<svg ${size}><path d="M0 0v16h16V0H0zm10.1 12.5c-.6.9-1.5 1.2-2.6 1.2-2.2 0-3.4-1.5-3.4-3.8h1.5c.1 1.4.7 2.3 1.9 2.3.7 0 1.2-.4 1.2-1.1 0-.7-.5-1-1.6-1.3l-.6-.2c-1.4-.4-2.2-1.2-2.2-2.4 0-1.5 1.3-2.7 3.1-2.7 1.8 0 2.9 1.1 3 2.9h-1.5c-.1-1.1-.6-1.7-1.5-1.7-.6 0-1.1.4-1.1.9 0 .6.4.9 1.4 1.2l.7.2c1.5.5 2.3 1.2 2.3 2.6 0 1.7-1.4 2.9-3.2 2.9z"/></svg>`,
+        'go': `<svg ${size}><path d="M2.3 2.3L8 8l-5.7 5.7L1 12l4-4-4-4 1.3-1.3zm8 0L16 8l-5.7 5.7L9.3 12l4-4-4-4 1.3-1.3z"/></svg>`,
+        'py': `<svg ${size}><path d="M7 2.5c-.3 0-.5.2-.5.5v2c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V3c0-.3-.2-.5-.5-.5H7zm1 1h1v1H8v-1zM3 5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h10c.6 0 1-.4 1-1V6c0-.6-.4-1-1-1H3zm2 2h6v2H5V7z"/></svg>`,
+        'java': `<svg ${size}><path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm-1-9h2v4h2l-3 3-3-3h2V5z"/></svg>`,
+        'cpp': `<svg ${size}><path d="M0 8l2.5-2v4L0 8zm5-3l3 3-3 3V5zm5 0l3 3-3 3V5zm-7 1.5L9 8l-6 1.5V6.5z"/></svg>`,
+        'c': `<svg ${size}><path d="M8 1C4.1 1 1 4.1 1 8s3.1 7 7 7 7-3.1 7-7-3.1-7-7-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-1-8h2v6H7V5z"/></svg>`,
+        'html': `<svg ${size}><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm11.5 4.7L8 13.4l-4.5-8.7H3l5 9 5-9h1.5z"/></svg>`,
+        'css': `<svg ${size}><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm10 4H5l.3 3h5.4l-.3 3.3L8 11l-2.4-.7L5.3 9H3l.3 3 4.7 1.3 4.7-1.3.6-6H3l-.2-2h12.2z"/></svg>`,
+        'json': `<svg ${size}><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1zM6 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>`,
+        'xml': `<svg ${size}><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1z"/></svg>`,
+        'pdf': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 4h2v2H4V4zm0 3h8v1H4V7zm0 2h8v1H4V9z"/></svg>`,
+        'zip': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 9h2v2H4V9zm0 3h2v2H4v-2z"/></svg>`,
+        'tar': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h2v2H4V5zm0 3h2v2H4V8zm0 3h2v2H4v-2zm3-6h2v2H7V5zm0 3h2v2H7V8zm0 3h2v2H7v-2z"/></svg>`,
+        'gz': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h8v1H4V5zm0 3h8v1H4V8zm0 3h5v1H4v-1z"/></svg>`,
+        'jpg': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'jpeg': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'png': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'gif': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'mp3': `<svg ${size}><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12zm-.5-8v4.3c-.2-.1-.4-.2-.6-.2-.8 0-1.5.7-1.5 1.5S6.1 13 7 13s1.5-.7 1.5-1.5V6h2V5H8.5v1z"/></svg>`,
+        'mp4': `<svg ${size}><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
+        'mov': `<svg ${size}><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
+        'log': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 5h2v2H4V5zm0 3h8v1H4V8zm0 2h6v1H4v-1z"/></svg>`,
     };
-    return icons[extension.toLowerCase()] || '📄';
+
+    return icons[extension.toLowerCase()] || `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
 }
 
 // 显示/隐藏加载动画
@@ -150,35 +161,33 @@ async function loadRoots() {
 
 // 更新根目录选择器
 function updateRootSelect() {
-    if (!rootSelect) return;
+    // 重新获取元素引用
+    const rootSelectEl = document.getElementById('rootSelect');
+    if (!rootSelectEl) return;
 
-    rootSelect.innerHTML = '';
+    // 清空现有选项
+    rootSelectEl.innerHTML = '';
+
     rootDirs.forEach((root, index) => {
         const option = document.createElement('option');
         option.value = index;
         option.textContent = root.name;
-        rootSelect.appendChild(option);
+        rootSelectEl.appendChild(option);
     });
 
     // 设置当前选中的根目录
-    rootSelect.value = currentRootIndex;
-
-    // 添加切换事件
-    rootSelect.addEventListener('change', (e) => {
-        const newIndex = parseInt(e.target.value);
-        if (newIndex !== currentRootIndex) {
-            currentRootIndex = newIndex;
-            // 重置路径并重新加载
-            currentPath = '/';
-            loadDirectory('/', currentRootIndex);
-        }
-    });
+    rootSelectEl.value = currentRootIndex;
 }
 
 // 更新面包屑导航
 function updateBreadcrumb(path) {
     const parts = path.split('/').filter(p => p);
-    let html = '<span class="breadcrumb-item">🏠 根目录</span>';
+    let html = `<span class="breadcrumb-item" title="根目录">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: middle;">
+            <path d="M8.354 1.146a.5.5 0 00-.708 0l-6 6A.5.5 0 001.5 7.5v7a.5.5 0 00.5.5h4.5a.5.5 0 00.5-.5v-4h1v4a.5.5 0 00.5.5h4.5a.5.5 0 00.5-.5v-7a.5.5 0 00-.146-.354z"/>
+        </svg>
+        根目录
+    </span>`;
 
     parts.forEach((part, index) => {
         html += '<span class="breadcrumb-separator">/</span>';
@@ -203,7 +212,7 @@ function updateBreadcrumb(path) {
 }
 
 // 加载目录内容
-async function loadDirectory(path, rootIndex = currentRootIndex) {
+async function loadDirectory(path, rootIndex = currentRootIndex, hideContent = true) {
     try {
         showLoading();
         // 规范化路径
@@ -224,8 +233,10 @@ async function loadDirectory(path, rootIndex = currentRootIndex) {
         // 更新根目录选择器
         rootSelect.value = currentRootIndex;
 
-        // 确保文件内容视图被隐藏
-        document.getElementById('contentView').style.display = 'none';
+        // 根据参数决定是否隐藏文件内容视图
+        if (hideContent) {
+            document.getElementById('contentView').style.display = 'none';
+        }
     } catch (error) {
         showError(error.message);
     } finally {
@@ -239,7 +250,11 @@ function renderFileList(files) {
     if (!files || files.length === 0) {
         fileList.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon">📭</div>
+                <div class="empty-state-icon">
+                    <svg width="48" height="48" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/>
+                    </svg>
+                </div>
                 <div class="empty-state-text">此文件夹为空</div>
             </div>
         `;
@@ -272,14 +287,13 @@ function renderFileList(files) {
     `;
 
     files.forEach(file => {
-        const isJsonFile = !file.isDir && file.extension === 'json';
-        // 对路径进行 HTML 转义，避免 Windows 路径中的反斜杠被当作转义符
-        const escapedPath = escapeHtml(file.path);
-
         const actionButtons = file.isDir ? '' : `
-            <button class="btn-small btn-edit-list btn-action" data-path="${file.path}" data-action="edit" title="编辑">✏️</button>
-            ${isJsonFile ? `<button class="btn-small btn-advanced-edit-list btn-action" data-path="${file.path}" data-action="advanced-edit" title="高级编辑">⚙️</button>` : ''}
-            <button class="btn-small btn-delete-list btn-action" data-path="${file.path}" data-action="delete" title="删除">🗑️</button>
+            <button class="btn-small btn-delete-list btn-action" data-path="${file.path}" data-action="delete" title="删除">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0v-6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                </svg>
+            </button>
         `;
 
         html += `
@@ -319,16 +333,8 @@ function renderFileList(files) {
             const path = btn.getAttribute('data-path');
             const action = btn.getAttribute('data-action');
 
-            switch (action) {
-                case 'edit':
-                    editFile(path);
-                    break;
-                case 'advanced-edit':
-                    advancedEditFile(path);
-                    break;
-                case 'delete':
-                    deleteFileFromList(path);
-                    break;
+            if (action === 'delete') {
+                deleteFileFromList(path);
             }
         });
     });
@@ -384,6 +390,11 @@ async function viewFile(path, page = 1) {
 
         renderFileContent(data);
         showContentView();
+
+        // 同时加载文件列表（如果尚未加载）
+        if (fileList.innerHTML === '' || fileList.children.length === 0) {
+            loadDirectory(currentPath, currentRootIndex, false); // false = 不隐藏文件内容
+        }
     } catch (error) {
         showError(error.message);
     } finally {
@@ -490,6 +501,27 @@ function renderFileContent(data) {
     }).join('');
 
     fileContent.innerHTML = linesHtml;
+    fileContent.style.display = 'block';
+    fileEditor.style.display = 'none';
+
+    // 显示编辑按钮（只对文本文件显示）
+    const editFileBtn = document.getElementById('editFileBtn');
+    const advancedEditBtn = document.getElementById('advancedEditBtn');
+    if (editFileBtn && advancedEditBtn) {
+        const extension = currentFilePath.split('.').pop().toLowerCase();
+        if (isTextFile(extension)) {
+            editFileBtn.style.display = 'inline-flex';
+            // 如果是JSON文件，显示高级编辑按钮
+            if (extension === 'json') {
+                advancedEditBtn.style.display = 'inline-flex';
+            } else {
+                advancedEditBtn.style.display = 'none';
+            }
+        } else {
+            editFileBtn.style.display = 'none';
+            advancedEditBtn.style.display = 'none';
+        }
+    }
 
     // 如果是分页内容，显示分页控件
     if (data.isPartial) {
@@ -580,10 +612,6 @@ document.getElementById('upBtn').addEventListener('click', () => {
     // 获取父目录路径
     const parentPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/')) || '/';
     loadDirectory(parentPath);
-});
-
-document.getElementById('backBtn').addEventListener('click', () => {
-    showListView();
 });
 
 document.getElementById('createFileBtn').addEventListener('click', () => {
@@ -1438,9 +1466,128 @@ window.onload = function() {
         });
     }
 
+    // 编辑按钮事件
+    const editFileBtn = document.getElementById('editFileBtn');
+    const saveFileBtn = document.getElementById('saveFileBtn');
+    const fileEditor = document.getElementById('fileEditor');
+    let isEditMode = false;
+
+    if (editFileBtn && saveFileBtn && fileEditor) {
+        editFileBtn.addEventListener('click', () => {
+            if (!isEditMode) {
+                // 切换到编辑模式
+                isEditMode = true;
+                fileEditor.value = currentFileContent.join('\n');
+                fileContent.style.display = 'none';
+                fileEditor.style.display = 'block';
+                saveFileBtn.style.display = 'inline-flex';
+                editFileBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M16 8A8 8 0 110 8a8 8 0 0116 0zm-3.97-3.03a.75.75 0 00-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 00-1.06 1.06L6.97 11.03a.75.75 0 001.079-.02l3.992-4.99a.75.75 0 00-.01-1.05z"/>
+                    </svg>
+                    取消
+                `;
+            } else {
+                // 取消编辑，返回查看模式
+                isEditMode = false;
+                fileContent.style.display = 'block';
+                fileEditor.style.display = 'none';
+                saveFileBtn.style.display = 'none';
+                editFileBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M12.854 2.854a.5.5 0 00-.708 0L11 4l1.5 1.5 1.146-1.146a.5.5 0 000-.708l-.792-.792zM10 5l-8.5 8.5V15h1.5L11.5 6.5 10 5z"/>
+                    </svg>
+                `;
+            }
+        });
+
+        saveFileBtn.addEventListener('click', async () => {
+            try {
+                showLoading();
+                const newContent = fileEditor.value;
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        path: currentFilePath,
+                        content: newContent,
+                        root: currentRootIndex
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('保存失败');
+                }
+
+                // 更新当前内容
+                currentFileContent = newContent.split('\n');
+
+                // 返回查看模式
+                isEditMode = false;
+                fileContent.innerHTML = currentFileContent.map((line, index) => {
+                    return `<div class="file-line" data-line-number="${index + 1}">${escapeHtml(line)}</div>`;
+                }).join('');
+                fileContent.style.display = 'block';
+                fileEditor.style.display = 'none';
+                saveFileBtn.style.display = 'none';
+                editFileBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M12.854 2.854a.5.5 0 00-.708 0L11 4l1.5 1.5 1.146-1.146a.5.5 0 000-.708l-.792-.792zM10 5l-8.5 8.5V15h1.5L11.5 6.5 10 5z"/>
+                    </svg>
+                `;
+
+                alert('保存成功！');
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                hideLoading();
+            }
+        });
+    }
+
+    // 高级编辑按钮事件（JSON文件）
+    const advancedEditBtn = document.getElementById('advancedEditBtn');
+    if (advancedEditBtn) {
+        advancedEditBtn.addEventListener('click', () => {
+            if (currentFilePath) {
+                advancedEditFile(currentFilePath);
+            }
+        });
+    }
+
+    // 根目录选择器事件
+    const rootSelectEl = document.getElementById('rootSelect');
+    if (rootSelectEl) {
+        rootSelectEl.addEventListener('change', (e) => {
+            const newIndex = parseInt(e.target.value);
+            if (!isNaN(newIndex) && newIndex !== currentRootIndex) {
+                currentRootIndex = newIndex;
+                // 重置路径并重新加载
+                currentPath = '/';
+                loadDirectory('/', currentRootIndex);
+            }
+        });
+    }
+
     // 先加载根目录列表
     loadRoots().then(() => {
-        // 默认显示文件列表
-        loadDirectory('/');
+        // 检查URL中是否有文件路径参数（用于直接访问文件）
+        const urlParams = new URLSearchParams(window.location.search);
+        const filePath = urlParams.get('file');
+        const rootParam = urlParams.get('root');
+
+        if (filePath) {
+            // 如果有文件路径参数，直接查看文件
+            const rootIndex = rootParam ? parseInt(rootParam) : 0;
+            if (!isNaN(rootIndex)) {
+                currentRootIndex = rootIndex;
+            }
+            viewFile('/' + decodeURIComponent(filePath));
+        } else {
+            // 默认显示文件列表
+            loadDirectory('/');
+        }
     });
 };
