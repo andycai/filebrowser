@@ -126,7 +126,8 @@ func (s *Server) Start() error {
 		// 为每个静态目录创建路由
 		mountPath := "/static/" + staticDir.Name + "/"
 		fs := http.FileServer(http.Dir(absPath))
-		http.Handle(mountPath, http.StripPrefix(mountPath, fs))
+		// 使用自定义的 no-cache 包装器
+		http.Handle(mountPath, noCacheWrapper(http.StripPrefix(mountPath, fs)))
 		log.Printf("Mounted static directory '%s' at %s -> %s", staticDir.Name, mountPath, absPath)
 	}
 
@@ -165,6 +166,11 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		s.handleError(w, fmt.Errorf("page not found"), http.StatusNotFound)
 		return
 	}
+
+	// 设置禁用缓存的响应头
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 
 	// 从第一个静态目录加载 index.html（如果存在）
 	for _, staticDir := range s.config.StaticDirs {
@@ -952,6 +958,20 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "文件上传成功",
+	})
+}
+
+// noCacheWrapper 包装 HTTP 处理器，添加禁用缓存的响应头
+func noCacheWrapper(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 设置禁用缓存的响应头
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+
+		// 调用原始处理器
+		h.ServeHTTP(w, r)
 	})
 }
 
