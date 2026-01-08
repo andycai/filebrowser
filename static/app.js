@@ -90,45 +90,44 @@ function isTextFile(extension) {
 
 // 工具函数：获取文件图标
 function getFileIcon(isDir, extension) {
-    // 使用 SVG 图标代替 emoji，更精致
     const size = 'width="14" height="14" viewBox="0 0 16 16" fill="currentColor"';
 
     if (isDir) {
-        return `<svg ${size}><path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/></svg>`;
+        return `<svg ${size} style="color: #dcb67a;"><path d="M14.5 3H7.707L6.354 1.646A.5.5 0 006 1.5H1.5A.5.5 0 001 2v12a.5.5 0 00.5.5h13a.5.5 0 00.5-.5V3.5a.5.5 0 00-.5-.5zM2 2h4.293l1.354 1.354a.5.5 0 00.353.146H14v10H2V2z"/></svg>`;
     }
 
     if (!extension) {
-        return `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
+        return `<svg ${size} style="color: #cccccc;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
     }
 
     const icons = {
-        'txt': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`,
-        'md': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM3 5v9a1 1 0 001 1h8a1 1 0 001-1V5H3z"/></svg>`,
-        'js': `<svg ${size}><path d="M0 0v16h16V0H0zm10.1 12.5c-.6.9-1.5 1.2-2.6 1.2-2.2 0-3.4-1.5-3.4-3.8h1.5c.1 1.4.7 2.3 1.9 2.3.7 0 1.2-.4 1.2-1.1 0-.7-.5-1-1.6-1.3l-.6-.2c-1.4-.4-2.2-1.2-2.2-2.4 0-1.5 1.3-2.7 3.1-2.7 1.8 0 2.9 1.1 3 2.9h-1.5c-.1-1.1-.6-1.7-1.5-1.7-.6 0-1.1.4-1.1.9 0 .6.4.9 1.4 1.2l.7.2c1.5.5 2.3 1.2 2.3 2.6 0 1.7-1.4 2.9-3.2 2.9z"/></svg>`,
-        'go': `<svg ${size}><path d="M2.3 2.3L8 8l-5.7 5.7L1 12l4-4-4-4 1.3-1.3zm8 0L16 8l-5.7 5.7L9.3 12l4-4-4-4 1.3-1.3z"/></svg>`,
-        'py': `<svg ${size}><path d="M7 2.5c-.3 0-.5.2-.5.5v2c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V3c0-.3-.2-.5-.5-.5H7zm1 1h1v1H8v-1zM3 5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h10c.6 0 1-.4 1-1V6c0-.6-.4-1-1-1H3zm2 2h6v2H5V7z"/></svg>`,
-        'java': `<svg ${size}><path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm-1-9h2v4h2l-3 3-3-3h2V5z"/></svg>`,
-        'cpp': `<svg ${size}><path d="M0 8l2.5-2v4L0 8zm5-3l3 3-3 3V5zm5 0l3 3-3 3V5zm-7 1.5L9 8l-6 1.5V6.5z"/></svg>`,
-        'c': `<svg ${size}><path d="M8 1C4.1 1 1 4.1 1 8s3.1 7 7 7 7-3.1 7-7-3.1-7-7-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-1-8h2v6H7V5z"/></svg>`,
-        'html': `<svg ${size}><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm11.5 4.7L8 13.4l-4.5-8.7H3l5 9 5-9h1.5z"/></svg>`,
-        'css': `<svg ${size}><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm10 4H5l.3 3h5.4l-.3 3.3L8 11l-2.4-.7L5.3 9H3l.3 3 4.7 1.3 4.7-1.3.6-6H3l-.2-2h12.2z"/></svg>`,
-        'json': `<svg ${size}><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1zM6 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>`,
-        'xml': `<svg ${size}><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1z"/></svg>`,
-        'pdf': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 4h2v2H4V4zm0 3h8v1H4V7zm0 2h8v1H4V9z"/></svg>`,
-        'zip': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 9h2v2H4V9zm0 3h2v2H4v-2z"/></svg>`,
-        'tar': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h2v2H4V5zm0 3h2v2H4V8zm0 3h2v2H4v-2zm3-6h2v2H7V5zm0 3h2v2H7V8zm0 3h2v2H7v-2z"/></svg>`,
-        'gz': `<svg ${size}><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h8v1H4V5zm0 3h8v1H4V8zm0 3h5v1H4v-1z"/></svg>`,
-        'jpg': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
-        'jpeg': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
-        'png': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
-        'gif': `<svg ${size}><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
-        'mp3': `<svg ${size}><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12zm-.5-8v4.3c-.2-.1-.4-.2-.6-.2-.8 0-1.5.7-1.5 1.5S6.1 13 7 13s1.5-.7 1.5-1.5V6h2V5H8.5v1z"/></svg>`,
-        'mp4': `<svg ${size}><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
-        'mov': `<svg ${size}><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
-        'log': `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 5h2v2H4V5zm0 3h8v1H4V8zm0 2h6v1H4v-1z"/></svg>`,
+        'txt': `<svg ${size} style="color: #cccccc;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`,
+        'md': `<svg ${size} style="color: #519aba;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM3 5v9a1 1 0 001 1h8a1 1 0 001-1V5H3z"/></svg>`,
+        'js': `<svg ${size} style="color: #f1dd3f;"><path d="M0 0v16h16V0H0zm10.1 12.5c-.6.9-1.5 1.2-2.6 1.2-2.2 0-3.4-1.5-3.4-3.8h1.5c.1 1.4.7 2.3 1.9 2.3.7 0 1.2-.4 1.2-1.1 0-.7-.5-1-1.6-1.3l-.6-.2c-1.4-.4-2.2-1.2-2.2-2.4 0-1.5 1.3-2.7 3.1-2.7 1.8 0 2.9 1.1 3 2.9h-1.5c-.1-1.1-.6-1.7-1.5-1.7-.6 0-1.1.4-1.1.9 0 .6.4.9 1.4 1.2l.7.2c1.5.5 2.3 1.2 2.3 2.6 0 1.7-1.4 2.9-3.2 2.9z"/></svg>`,
+        'go': `<svg ${size} style="color: #00add8;"><path d="M2.3 2.3L8 8l-5.7 5.7L1 12l4-4-4-4 1.3-1.3zm8 0L16 8l-5.7 5.7L9.3 12l4-4-4-4 1.3-1.3z"/></svg>`,
+        'py': `<svg ${size} style="color: #ffde57;"><path d="M7 2.5c-.3 0-.5.2-.5.5v2c0 .3.2.5.5.5h2c.3 0 .5-.2.5-.5V3c0-.3-.2-.5-.5-.5H7zm1 1h1v1H8v-1zM3 5c-.6 0-1 .4-1 1v4c0 .6.4 1 1 1h10c.6 0 1-.4 1-1V6c0-.6-.4-1-1-1H3zm2 2h6v2H5V7z"/></svg>`,
+        'java': `<svg ${size} style="color: #f89820;"><path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm0 14c-3.3 0-6-2.7-6-6s2.7-6 6-6 6 2.7 6 6-2.7 6-6 6zm-1-9h2v4h2l-3 3-3-3h2V5z"/></svg>`,
+        'cpp': `<svg ${size} style="color: #00599c;"><path d="M0 8l2.5-2v4L0 8zm5-3l3 3-3 3V5zm5 0l3 3-3 3V5zm-7 1.5L9 8l-6 1.5V6.5z"/></svg>`,
+        'c': `<svg ${size} style="color: #555555;"><path d="M8 1C4.1 1 1 4.1 1 8s3.1 7 7 7 7-3.1 7-7-3.1-7-7-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm-1-8h2v6H7V5z"/></svg>`,
+        'html': `<svg ${size} style="color: #e34c26;"><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm11.5 4.7L8 13.4l-4.5-8.7H3l5 9 5-9h1.5z"/></svg>`,
+        'css': `<svg ${size} style="color: #563d7c;"><path d="M1 0l1.3 14.4L8 16l5.7-1.6L15 0H1zm10 4H5l.3 3h5.4l-.3 3.3L8 11l-2.4-.7L5.3 9H3l.3 3 4.7 1.3 4.7-1.3.6-6H3l-.2-2h12.2z"/></svg>`,
+        'json': `<svg ${size} style="color: #f1dd3f;"><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1zM6 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>`,
+        'xml': `<svg ${size} style="color: #0060ac;"><path d="M4 2a2 2 0 00-2 2v8a2 2 0 002 2h1a.5.5 0 000-1H4a1 1 0 01-1-1V4a1 1 0 011-1h1a.5.5 0 000-1H4zm7 0a.5.5 0 000 1h1a1 1 0 011 1v8a1 1 0 01-1 1h-1a.5.5 0 000 1h1a2 2 0 002-2V4a2 2 0 00-2-2h-1z"/></svg>`,
+        'pdf': `<svg ${size} style="color: #f40f02;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 4h2v2H4V4zm0 3h8v1H4V7zm0 2h8v1H4V9z"/></svg>`,
+        'zip': `<svg ${size} style="color: #a074c4;"><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 9h2v2H4V9zm0 3h2v2H4v-2z"/></svg>`,
+        'tar': `<svg ${size} style="color: #a074c4;"><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h2v2H4V5zm0 3h2v2H4V8zm0 3h2v2H4v-2zm3-6h2v2H7V5zm0 3h2v2H7V8zm0 3h2v2H7v-2z"/></svg>`,
+        'gz': `<svg ${size} style="color: #a074c4;"><path d="M10 0H4a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4l-4-4zm-1 2v2h2l-2-2zM4 5h8v1H4V5zm0 3h8v1H4V8zm0 3h5v1H4v-1z"/></svg>`,
+        'jpg': `<svg ${size} style="color: #a074c4;"><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'jpeg': `<svg ${size} style="color: #a074c4;"><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'png': `<svg ${size} style="color: #a074c4;"><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'gif': `<svg ${size} style="color: #a074c4;"><path d="M1 2a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V2a1 1 0 00-1-1H3zm2 3a1 1 0 100 2 1 1 0 000-2zm0 3l2 3 2-2 2 3H5v-4z"/></svg>`,
+        'mp3': `<svg ${size} style="color: #41b883;"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 13A6 6 0 118 2a6 6 0 010 12zm-.5-8v4.3c-.2-.1-.4-.2-.6-.2-.8 0-1.5.7-1.5 1.5S6.1 13 7 13s1.5-.7 1.5-1.5V6h2V5H8.5v1z"/></svg>`,
+        'mp4': `<svg ${size} style="color: #41b883;"><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
+        'mov': `<svg ${size} style="color: #41b883;"><path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm2-1a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1H4zm5.5 4.5l-3 2v-4l3 2z"/></svg>`,
+        'log': `<svg ${size} style="color: #888888;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2zM4 5h2v2H4V5zm0 3h8v1H4V8zm0 2h6v1H4v-1z"/></svg>`,
     };
 
-    return icons[extension.toLowerCase()] || `<svg ${size}><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
+    return icons[extension.toLowerCase()] || `<svg ${size} style="color: #cccccc;"><path d="M4 0h5.293A1 1 0 0110 1.293L13.707 5a1 1 0 01.293.707V14a2 2 0 01-2 2H4a2 2 0 01-2-2V2a2 2 0 012-2zm5.5 1.5v2h2l-2-2z"/></svg>`;
 }
 
 // 显示/隐藏加载动画
@@ -289,9 +288,11 @@ function renderFileList(files) {
     files.forEach(file => {
         const actionButtons = file.isDir ? '' : `
             <button class="btn-small btn-delete-list btn-action" data-path="${file.path}" data-action="delete" title="删除">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0v-6z"/>
-                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #f48771;">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
                 </svg>
             </button>
         `;
